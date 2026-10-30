@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#1e1b4b" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  <!-- App Icon Rounded Background -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
+  
+  <!-- Calendar Card -->
+  <g filter="url(#shadow)">
+    <rect x="96" y="112" width="320" height="304" rx="40" fill="#ffffff" />
+    <!-- Calendar Top Header -->
+    <path d="M96 152 C96 129.909 113.909 112 136 112 H376 C398.091 112 416 129.909 416 152 V196 H96 V152 Z" fill="#ef4444" />
+    <!-- Binder Rings -->
+    <rect x="164" y="84" width="24" height="56" rx="12" fill="#f8fafc" />
+    <rect x="324" y="84" width="24" height="56" rx="12" fill="#f8fafc" />
+    <!-- Calendar Grid Dots (Representing 5 School Departments) -->
+    <circle cx="168" cy="256" r="18" fill="#2563eb" />
+    <circle cx="256" cy="256" r="18" fill="#10b981" />
+    <circle cx="344" cy="256" r="18" fill="#f59e0b" />
+    <circle cx="168" cy="332" r="18" fill="#e11d48" />
+    <circle cx="256" cy="332" r="18" fill="#9333ea" />
+    <rect x="320" y="318" width="48" height="28" rx="10" fill="#cbd5e1" />
+  </g>
+</svg>

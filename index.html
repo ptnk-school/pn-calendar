@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ปฏิทินปฏิบัติงาน โรงเรียนพัฒนานิคม</title>
+
+  <!-- PWA & Mobile Home Screen Meta Tags (iOS / iPadOS / Android) -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1d4ed8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="ร.ร.พัฒนานิคม" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="apple-touch-icon" href="logo.png" />
+
+  <!-- Google Fonts: Sarabun & Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sarabun', 'sans-serif'],
+            display: ['Prompt', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar (No-Print) -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <!-- Brand / School Logo -->
+      <div class="flex items-center gap-3 min-w-0">
+        <img src="logo.png" alt="ตราโรงเรียนพัฒนานิคม" class="w-11 h-11 object-contain rounded-xl bg-white p-0.5 border border-slate-200 shadow-xs shrink-0" />
+        <div class="min-w-0">
+          <h1 class="font-display font-bold text-base sm:text-xl text-slate-900 leading-tight truncate" id="schoolTitleDisplay">
+            ปฏิทินปฏิบัติงานโรงเรียนพัฒนานิคม
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 flex items-center gap-1.5 truncate">
+            <span id="syncStatusDot" class="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0"></span>
+            <span id="syncStatusText" class="truncate">โหมดสาธิต (เชื่อม Google Sheets ได้)</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Actions: Add Event, User Login, Install App (Home Screen), Settings -->
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        <!-- Add Event Button (Shown when logged in) -->
+        <button id="btnOpenAddModal" onclick="openEventModal()" class="hidden items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-display font-medium text-xs sm:text-sm px-3 sm:px-3.5 py-2 rounded-xl shadow-sm shadow-blue-500/20 transition">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">เพิ่มงาน/กิจกรรม</span>
+        </button>
+
+        <!-- Current Role Badge / Login Button -->
+        <div id="userStatusContainer">
+          <button onclick="openLoginModal()" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-display font-medium text-xs sm:text-sm px-3 sm:px-3.5 py-2 rounded-xl transition">
+            <i data-lucide="log-in" class="w-4 h-4 text-blue-600"></i>
+            <span>เข้าสู่ระบบสารสนเทศ</span>
+          </button>
+        </div>
+
+        <!-- Add to Home Screen / Install App Button -->
+        <button id="btnInstallApp" onclick="handleInstallButtonClick()" title="เพิ่มไปยังหน้าจอโฮม (มือถือ / iPad)" class="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-display font-medium text-xs px-2.5 sm:px-3 py-2 rounded-xl transition">
+          <i data-lucide="smartphone" class="w-4 h-4"></i>
+          <span class="hidden md:inline">เพิ่มลงหน้าจอโฮม</span>
+        </button>
+
+        <!-- Google Sheets Setup / Sync Button -->
+        <button onclick="openSheetsConfigModal()" title="ตั้งค่าการเชื่อมต่อ Google Sheets" class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition relative">
+          <i data-lucide="database" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+    
+    <!-- Print Header (Visible only when printing) -->
+    <div class="print-only mb-4 border-b-2 border-slate-800 pb-3">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <img src="logo.png" alt="ตราโรงเรียนพัฒนานิคม" class="w-14 h-14 object-contain" />
+          <div>
+            <h1 class="font-display font-bold text-2xl text-slate-900" id="printMainTitle">ปฏิทินปฏิบัติงาน โรงเรียนพัฒนานิคม</h1>
+            <p id="printSubtitle" class="text-sm text-slate-600 mt-0.5">ประจำเดือน ...</p>
+          </div>
+        </div>
+        <div class="text-right text-xs text-slate-500">
+          <p id="printFilterInfo">กลุ่มงานทั้งหมด</p>
+          <p id="printDateInfo">พิมพ์เมื่อ: -</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Control Bar: Filters, Search, Submission Toggle, Export -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-6 shadow-sm no-print">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        
+        <!-- Department Filter Pills + Submission Filter -->
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2" id="departmentFilterPills">
+            <!-- Populated by JS -->
+          </div>
+
+          <span class="text-slate-300 hidden sm:inline">|</span>
+
+          <!-- Filter Only Submission Tasks Button -->
+          <button id="btnFilterSubmission" onclick="toggleSubmissionFilter()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-display font-semibold border transition bg-white text-rose-700 border-rose-200 hover:bg-rose-50" title="กรองเฉพาะงานที่ต้องส่ง">
+            <span>📌</span>
+            <span>เฉพาะงานที่ต้องส่ง</span>
+          </button>
+        </div>
+
+        <!-- Search & Academic Year & Export Tools -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          <!-- Search Box -->
+          <div class="relative flex-1 sm:flex-initial sm:w-52">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input 
+              type="text" 
+              id="searchInput" 
+              oninput="handleSearchOrFilter()"
+              placeholder="ค้นหาชื่องาน, สถานที่..." 
+              class="w-full pl-9 pr-3 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+            />
+          </div>
+
+          <!-- Academic Year Filter -->
+          <select id="academicYearSelect" onchange="handleSearchOrFilter()" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all" selected>ทุกปี (ปีงบประมาณ 2570)</option>
+            <option value="2569">ปีการศึกษา 2569</option>
+            <option value="2570">ปีการศึกษา 2570</option>
+            <option value="2568">ปีการศึกษา 2568</option>
+          </select>
+
+          <!-- Export CSV / Excel -->
+          <button onclick="exportToCSV()" class="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition" title="ส่งออกเป็นไฟล์ Excel (CSV)">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span>Excel (CSV)</span>
+          </button>
+
+          <!-- Print / PDF -->
+          <button onclick="printCalendar()" class="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition" title="พิมพ์ปฏิทินหรือบันทึกเป็น PDF">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>พิมพ์ / PDF</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Navigation & View Switcher Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+      <!-- Month Navigation -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm no-print">
+          <button onclick="changeMonth(-1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition" title="เดือนก่อนหน้า">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          </button>
+          <button onclick="goToToday()" class="px-3 py-1 text-xs font-display font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">
+            วันนี้
+          </button>
+          <button onclick="changeMonth(1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition" title="เดือนถัดไป">
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <h2 id="currentMonthYearTitle" class="font-display font-bold text-xl sm:text-2xl text-slate-900">
+          ตุลาคม 2569
+        </h2>
+
+        <button onclick="refreshFromGoogleSheets()" id="btnRefreshSync" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition no-print" title="ซิงค์ข้อมูลล่าสุด">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Summary Counters & View Mode Switcher -->
+      <div class="flex items-center justify-between sm:justify-end gap-3 no-print">
+        <div class="flex items-center gap-2">
+          <span id="eventCountBadge" class="text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">
+            0 รายการในเดือนนี้
+          </span>
+          <span id="submissionCountBadge" class="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-full">
+            📌 งานที่ต้องส่ง 0 งาน
+          </span>
+        </div>
+
+        <div class="bg-slate-200/80 p-1 rounded-xl flex items-center text-xs font-display font-medium">
+          <button id="tabViewMonth" onclick="switchViewMode('month')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm transition">
+            <i data-lucide="grid" class="w-3.5 h-3.5"></i>
+            <span>ตารางเดือน</span>
+          </button>
+          <button id="tabViewList" onclick="switchViewMode('list')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+            <i data-lucide="list" class="w-3.5 h-3.5"></i>
+            <span>รายการกำหนดการ</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role Permission Info Banner (When logged in as Department Staff) -->
+    <div id="roleInfoBanner" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm text-blue-900 no-print">
+      <div class="flex items-center gap-2">
+        <i data-lucide="shield-check" class="w-4 h-4 text-blue-600 shrink-0"></i>
+        <span id="roleInfoText">คุณกำลังอยู่ในโหมดเจ้าหน้าที่สารสนเทศ</span>
+      </div>
+      <span class="text-xs text-blue-600 font-medium hidden sm:inline">คลิกที่ช่องวันที่ในปฏิทินเพื่อเพิ่มงานได้ทันที</span>
+    </div>
+
+    <!-- VIEW 1: MONTHLY CALENDAR GRID -->
+    <section id="monthViewSection" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <!-- Days of Week Header -->
+      <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center font-display font-semibold text-xs sm:text-sm text-slate-600">
+        <div class="py-2.5 text-rose-600">อา.</div>
+        <div class="py-2.5">จ.</div>
+        <div class="py-2.5">อ.</div>
+        <div class="py-2.5">พ.</div>
+        <div class="py-2.5">พฤ.</div>
+        <div class="py-2.5">ศ.</div>
+        <div class="py-2.5 text-indigo-600">ส.</div>
+      </div>
+      <!-- Calendar Days Grid -->
+      <div id="calendarGrid" class="grid grid-cols-7 divide-x divide-y divide-slate-200 border-b border-slate-200">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: LIST / SCHEDULE VIEW -->
+    <section id="listViewSection" class="hidden space-y-3">
+      <!-- Rendered by JS -->
+    </section>
+
+    <!-- Legend Footer -->
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500 px-1">
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex flex-wrap items-center gap-4" id="departmentLegend">
+          <!-- Rendered by JS -->
+        </div>
+        <div class="flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-rose-800 px-2.5 py-1 rounded-lg font-semibold">
+          <span>📌 [ส่งงาน]</span>
+          <span>= งานที่ต้องส่งตามกำหนด</span>
+        </div>
+      </div>
+      <div class="no-print">
+        <span>คลิกที่รายการเพื่อดูรายละเอียด หรือแก้ไข/ลบ (ตามสิทธิ์กลุ่มงาน)</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. LOGIN MODAL (Role & Department Selection) -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-fade-in">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <img src="logo.png" alt="Logo" class="w-9 h-9 object-contain" />
+          <div>
+            <h3 class="font-display font-bold text-lg text-slate-900">เข้าสู่ระบบสารสนเทศกลุ่มงาน</h3>
+            <p class="text-xs text-slate-500">เลือกกลุ่มงานของคุณเพื่อเพิ่มหรือแก้ไขกิจกรรม/งานที่ต้องส่ง</p>
+          </div>
+        </div>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleLoginSubmit(event)" class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">เลือกกลุ่มงาน / บทบาท</label>
+          <select id="loginDeptSelect" required class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="academic">📘 กลุ่มบริหารวิชาการ</option>
+            <option value="student">📗 กลุ่มบริหารกิจการนักเรียน</option>
+            <option value="general">📙 กลุ่มบริหารทั่วไป</option>
+            <option value="budget">📕 กลุ่มบริหารงบประมาณและแผน</option>
+            <option value="personnel">🟪 กลุ่มบริหารงานบุคคล</option>
+            <option value="admin">⭐ ผู้ดูแลระบบกลาง (แก้ไขได้ทุกกลุ่มงาน)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">ชื่อผู้บันทึก / เจ้าหน้าที่สารสนเทศ</label>
+          <input type="text" id="loginStaffName" required placeholder="เช่น ครูกานดา (สารสนเทศวิชาการ)" class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่านประจำกลุ่มงาน (PIN)</label>
+          <input type="password" id="loginPasscode" required placeholder="กรอกรหัสผ่าน..." class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div class="mt-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
+            <p class="font-semibold text-slate-700">🔑 รหัสผ่านเริ่มต้นสำหรับทดสอบ:</p>
+            <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px]">
+              <span>• วิชาการ: <code class="font-bold text-blue-600">1111</code></span>
+              <span>• กิจการนักเรียน: <code class="font-bold text-emerald-600">2222</code></span>
+              <span>• บริหารทั่วไป: <code class="font-bold text-amber-600">3333</code></span>
+              <span>• งบประมาณ: <code class="font-bold text-rose-600">4444</code></span>
+              <span>• บุคลากร: <code class="font-bold text-purple-600">5555</code></span>
+              <span>• ผู้ดูแลระบบกลาง: <code class="font-bold text-slate-900">9999</code></span>
+            </div>
+          </div>
+        </div>
+
+        <div id="loginErrorMsg" class="hidden text-xs text-rose-600 bg-rose-50 px-3 py-2 rounded-lg font-medium"></div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="closeLoginModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">ยกเลิก</button>
+          <button type="submit" class="px-5 py-2 rounded-xl text-sm font-display font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm">เข้าสู่ระบบ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. ADD / EDIT EVENT MODAL -->
+  <div id="eventFormModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 id="eventModalTitle" class="font-display font-bold text-lg text-slate-900">เพิ่มรายการในปฏิทินโรงเรียน</h3>
+        <button onclick="closeEventModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleEventFormSubmit(event)" class="mt-4 space-y-4">
+        <input type="hidden" id="eventIdInput" />
+
+        <!-- Checkbox ทำเครื่องหมายเฉพาะ "งานที่ต้องส่ง" -->
+        <label for="eventIsSubmissionInput" class="flex items-start gap-3 p-3.5 rounded-xl border-2 border-rose-200 bg-rose-50/60 cursor-pointer hover:bg-rose-50 transition select-none">
+          <input type="checkbox" id="eventIsSubmissionInput" class="mt-0.5 w-4 h-4 accent-rose-600 rounded cursor-pointer" />
+          <div class="text-xs leading-relaxed">
+            <div class="font-display font-bold text-sm text-rose-900 flex items-center gap-1.5">
+              <span>📌 ทำเครื่องหมายเป็น "งานที่ต้องส่ง" (Deadline / ส่งเอกสาร)</span>
+            </div>
+            <p class="text-rose-700 mt-0.5">หากติ๊กช่องนี้ ระบบจะติดป้าย <strong>📌 [ส่งงาน]</strong> และตีกรอบเน้นให้เห็นเด่นชัดในปฏิทิน (หากไม่ติ๊ก จะแสดงเป็นงานกิจกรรมปกติ)</p>
+          </div>
+        </label>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อกิจกรรม / งานที่ต้องส่ง <span class="text-rose-500">*</span></label>
+          <input type="text" id="eventTitleInput" required placeholder="เช่น ส่งแผนการจัดการเรียนรู้, ประชุมคณะกรรมการบริหารหลักสูตร" class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">กลุ่มงานที่รับผิดชอบ <span class="text-rose-500">*</span></label>
+            <select id="eventDeptInput" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500">
+              <option value="academic">กลุ่มบริหารวิชาการ</option>
+              <option value="student">กลุ่มบริหารกิจการนักเรียน</option>
+              <option value="general">กลุ่มบริหารทั่วไป</option>
+              <option value="budget">กลุ่มบริหารงบประมาณและแผน</option>
+              <option value="personnel">กลุ่มบริหารงานบุคคล</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">ปีการศึกษา (พ.ศ.) <span class="text-rose-500">*</span></label>
+            <select id="eventAcademicYearInput" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="2568">2568</option>
+              <option value="2569" selected>2569</option>
+              <option value="2570">2570</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">วันที่เริ่ม / วันที่กำหนดส่ง <span class="text-rose-500">*</span></label>
+            <input type="date" id="eventStartDateInput" required onchange="syncEndDate()" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">วันที่สิ้นสุด <span class="text-rose-500">*</span></label>
+            <input type="date" id="eventEndDateInput" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">เวลา / กำหนดส่งภายในเวลา</label>
+            <input type="text" id="eventTimeInput" placeholder="เช่น ภายใน 16:30 น. หรือ 08:30 - 16:00 น." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">สถานที่จัด / ช่องทางส่งงาน</label>
+            <input type="text" id="eventLocationInput" placeholder="เช่น ห้องกลุ่มแผนงานฯ หรือ ระบบออนไลน์" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">รายละเอียดเพิ่มเติม / ผู้รับผิดชอบ</label>
+          <textarea id="eventDescInput" rows="3" placeholder="ระบุรายละเอียดเอกสารที่ต้องส่ง กลุ่มเป้าหมาย หรือชื่อครูผู้รับผิดชอบ..." class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeEventModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">ยกเลิก</button>
+          <button type="submit" id="btnSaveEvent" class="px-5 py-2 rounded-xl text-sm font-display font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-1.5">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>บันทึกรายการ</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. EVENT DETAIL VIEW MODAL -->
+  <div id="eventDetailModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span id="detailDeptBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold">
+            กลุ่มงาน
+          </span>
+          <!-- แสดงเฉพาะเมื่อเป็น "งานที่ต้องส่ง" -->
+          <span id="detailSubmissionBadge" class="hidden items-center gap-1 px-3 py-1 rounded-full text-xs font-display font-bold bg-rose-600 text-white shadow-xs">
+            📌 งานที่ต้องส่ง
+          </span>
+        </div>
+        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg shrink-0">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <h3 id="detailTitle" class="font-display font-bold text-xl text-slate-900 mt-3 leading-snug">
+        ชื่อกิจกรรม
+      </h3>
+
+      <div class="mt-4 space-y-2.5 text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">
+        <div class="flex items-start gap-2.5">
+          <i data-lucide="calendar" class="w-4 h-4 text-slate-400 mt-0.5 shrink-0"></i>
+          <div>
+            <span class="font-semibold text-slate-700" id="detailDateLabel">วันที่: </span>
+            <span id="detailDateText">-</span>
+          </div>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <i data-lucide="clock" class="w-4 h-4 text-slate-400 mt-0.5 shrink-0"></i>
+          <div>
+            <span class="font-semibold text-slate-700">เวลา: </span>
+            <span id="detailTimeText">-</span>
+          </div>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <i data-lucide="map-pin" class="w-4 h-4 text-slate-400 mt-0.5 shrink-0"></i>
+          <div>
+            <span class="font-semibold text-slate-700" id="detailLocationLabel">สถานที่: </span>
+            <span id="detailLocationText">-</span>
+          </div>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <i data-lucide="graduation-cap" class="w-4 h-4 text-slate-400 mt-0.5 shrink-0"></i>
+          <div>
+            <span class="font-semibold text-slate-700">ปีการศึกษา: </span>
+            <span id="detailYearText">-</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">รายละเอียด</h4>
+        <p id="detailDescText" class="text-sm text-slate-700 whitespace-pre-line bg-white border border-slate-100 rounded-xl p-3 min-h-[60px]">
+          -
+        </p>
+      </div>
+
+      <p id="detailUpdatedBy" class="mt-3 text-[11px] text-slate-400 text-right">
+        อัปเดตโดย: -
+      </p>
+
+      <!-- Action Buttons -->
+      <div id="detailActionButtons" class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+        <div id="detailPermissionHint" class="text-xs text-slate-400"></div>
+        <div class="flex items-center gap-2">
+          <button id="btnEditCurrentEvent" class="hidden items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-display font-medium bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition">
+            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+            <span>แก้ไข</span>
+          </button>
+          <button id="btnDeleteCurrentEvent" class="hidden items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-display font-medium bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>ลบรายการ</span>
+          </button>
+          <button onclick="closeDetailModal()" class="px-4 py-2 rounded-xl text-xs font-display font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+            ปิดหน้าต่าง
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. GOOGLE SHEETS CONNECTION & SETTINGS MODAL -->
+  <div id="sheetsConfigModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <i data-lucide="database" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-lg text-slate-900">ตั้งค่าโรงเรียน & เชื่อมต่อ Google Sheets</h3>
+            <p class="text-xs text-slate-500">ใช้ Google Sheets เป็นฐานข้อมูลเพื่อให้สารสนเทศแก้ไขผ่านชีตหรือหน้าเว็บได้</p>
+          </div>
+        </div>
+        <button onclick="closeSheetsConfigModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อโรงเรียน (แสดงบนหัวเว็บและใบพิมพ์)</label>
+          <input type="text" id="configSchoolNameInput" placeholder="โรงเรียนพัฒนานิคม" class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Google Apps Script Web App URL (สำหรับอ่านและบันทึกข้อมูลลงชีตอัตโนมัติ)</label>
+          <input type="url" id="configScriptUrlInput" placeholder="https://script.google.com/macros/s/xxxxxx/exec" class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <p class="text-[11px] text-slate-500 mt-1">
+            * หากเว้นว่างไว้ ระบบจะบันทึกข้อมูลไว้ในเครื่อง (LocalStorage) สำหรับทดลองใช้งานทันที
+          </p>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-700 space-y-2">
+          <div class="font-display font-semibold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="book-open" class="w-4 h-4 text-emerald-600"></i>
+            <span>วิธีเชื่อมต่อกับ Google Sheets ภายใน 3 นาที:</span>
+          </div>
+          <ol class="list-decimal list-inside space-y-1 text-slate-600">
+            <li>สร้างไฟล์ <strong>Google Sheets</strong> ใหม่ 1 ไฟล์</li>
+            <li>ไปที่เมนู <strong>ส่วนขยาย (Extensions) &gt; Apps Script</strong></li>
+            <li>คัดลอกโค้ดจากไฟล์ <code>Code.gs</code> (ในโฟลเดอร์โปรเจกต์นี้) ไปวางแล้วกด Save</li>
+            <li>กดปุ่ม <strong>การทำให้ใช้งานได้ (Deploy) &gt; การทำให้ใช้งานได้รายการใหม่ (New deployment)</strong></li>
+            <li>เลือกประเภทเป็น <strong>เว็บแอป (Web app)</strong> และตั้งค่าผู้มีสิทธิ์เข้าถึงเป็น <strong>ทุกคน (Anyone)</strong></li>
+            <li>คัดลอก <strong>Web App URL</strong> ที่ได้ มาวางในช่องด้านบนแล้วกดบันทึก</li>
+          </ol>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="resetDemoData()" class="text-xs text-rose-600 hover:underline font-medium">
+            รีเซ็ตข้อมูลตัวอย่างเริ่มต้น
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeSheetsConfigModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">ปิด</button>
+            <button type="button" onclick="saveSheetsConfig()" class="px-5 py-2 rounded-xl text-sm font-display font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">บันทึกการตั้งค่า</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ADD TO HOME SCREEN (iOS / iPadOS / Android) GUIDE MODAL -->
+  <div id="installGuideModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-fade-in">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <img src="logo.png" alt="ตราโรงเรียนพัฒนานิคม" class="w-11 h-11 object-contain rounded-xl border border-slate-200 p-0.5 shadow-xs" />
+          <div>
+            <h3 class="font-display font-bold text-base sm:text-lg text-slate-900">เพิ่มปฏิทินไปยังหน้าจอโฮม</h3>
+            <p class="text-xs text-slate-500">ไอคอนตราโรงเรียนพัฒนานิคม เปิดง่ายเหมือนแอป</p>
+          </div>
+        </div>
+        <button onclick="closeInstallGuideModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-xs sm:text-sm text-slate-700">
+        <!-- iPhone / iPad Instructions -->
+        <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3.5 space-y-2">
+          <div class="font-display font-semibold text-blue-950 flex items-center gap-1.5">
+            <i data-lucide="tablet-smartphone" class="w-4 h-4 text-blue-600"></i>
+            <span>สำหรับ iPhone และ iPad (ผ่าน Safari / Chrome)</span>
+          </div>
+          <ol class="list-decimal list-inside space-y-1.5 text-slate-700">
+            <li>แตะที่ปุ่ม <strong>แชร์ (Share)</strong> <span class="inline-block px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[11px] font-semibold">รูปสี่เหลี่ยมมีลูกศรชี้ขึ้น ↑</span> บนแถบเมนูของเบราว์เซอร์</li>
+            <li>เลื่อนลงมาแล้วแตะเลือกเมนู <strong>"เพิ่มไปยังหน้าจอโฮม" (Add to Home Screen)</strong></li>
+            <li>แตะปุ่ม <strong>"เพิ่ม" (Add)</strong> ที่มุมขวาบน จะได้ไอคอนตราโรงเรียนพัฒนานิคมบนหน้าจอทันที</li>
+          </ol>
+        </div>
+
+        <!-- Android Instructions -->
+        <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 space-y-2">
+          <div class="font-display font-semibold text-emerald-950 flex items-center gap-1.5">
+            <i data-lucide="smartphone" class="w-4 h-4 text-emerald-600"></i>
+            <span>สำหรับมือถือและแท็บเล็ต Android (Chrome)</span>
+          </div>
+          <ol class="list-decimal list-inside space-y-1.5 text-slate-700">
+            <li>แตะที่ปุ่มเมนู <strong>จุด 3 จุด (⋮)</strong> ที่มุมขวาบนของเบราว์เซอร์ Chrome</li>
+            <li>เลือกเมนู <strong>"เพิ่มลงในหน้าจอหลัก" (Add to Home screen)</strong> หรือ <strong>"ติดตั้งแอป" (Install app)</strong></li>
+            <li>กดยืนยันเพื่อสร้างทางลัดบนหน้าจอมือถือ</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end">
+        <button onclick="closeInstallGuideModal()" class="px-5 py-2 rounded-xl text-sm font-display font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+          เข้าใจแล้ว
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 no-print"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
