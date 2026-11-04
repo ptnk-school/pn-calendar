@@ -1,0 +1,224 @@
+/* Custom Styles & Print Media Queries for School Activity Calendar */
+
+.print-only {
+  display: none;
+}
+
+/* Standalone PWA Safe Area Support for iPhone / iPad */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth modal entry */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.18s ease-out forwards;
+}
+
+/* Calendar Cell Height & Scroll */
+.calendar-cell {
+  min-height: 118px;
+  transition: background-color 0.15s ease;
+}
+
+@media (max-width: 640px) {
+  .calendar-cell {
+    min-height: 86px;
+  }
+}
+
+/* Week Row with Multi-day Spanning Event Bars */
+.month-week-row {
+  position: relative;
+  min-height: 120px;
+}
+
+@media (max-width: 640px) {
+  .month-week-row {
+    min-height: 92px;
+  }
+}
+
+/* Event Pill & Spanning Bar */
+.event-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform 0.1s ease, filter 0.1s ease, box-shadow 0.1s ease;
+  position: relative;
+  z-index: 10;
+}
+
+.event-pill:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.1);
+  z-index: 20;
+}
+
+.event-span-bar {
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.event-continues-left {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.event-continues-right {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* เครื่องหมายเน้นเฉพาะ "งานที่ต้องส่ง" (Submission / Deadline) */
+.submission-pill {
+  border-left: 3.5px solid #e11d48 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(225, 29, 72, 0.12);
+}
+
+.submission-tag {
+  display: inline-flex;
+  align-items: center;
+  background-color: #e11d48;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 0px 4px;
+  border-radius: 4px;
+  line-height: 1.35;
+  flex-shrink: 0;
+}
+
+/* ================= SPLIT CALENDAR & ACTIVITY TABLE STYLES ================= */
+.mini-cal-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #ffffff;
+  border: 1.5px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mini-cal-table th {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-family: 'Prompt', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  padding: 5px 2px;
+  border: 1px solid #94a3b8;
+}
+
+.mini-cal-table td {
+  border: 1px solid #cbd5e1;
+  text-align: center;
+  vertical-align: middle;
+  height: 34px;
+  font-family: 'Prompt', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  position: relative;
+  transition: all 0.12s ease;
+}
+
+/* ช่องวันหยุดราชการ / วันสำคัญ (พื้นหลังสีแดง ตัวหนังสือสีขาว เหมือนต้นฉบับแต่คมชัด) */
+.mini-cal-holiday {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* ช่องวันที่มีภารกิจ/กิจกรรมของโรงเรียน */
+.mini-cal-has-event {
+  background-color: #eff6ff;
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
+}
+
+/* ช่องวันที่เป็นงานส่ง (Deadline) */
+.mini-cal-has-submission {
+  background-color: #fff1f2;
+  color: #be123c !important;
+  font-weight: 700 !important;
+}
+
+/* แถวภารกิจด้านขวา เมื่อชี้เมาส์หรือคลิกวันที่จากปฏิทินด้านซ้าย */
+.split-activity-row {
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.split-activity-row.highlight-date-match {
+  background-color: #fef9c3 !important;
+  box-shadow: inset 4px 0 0 #eab308;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .split-month-row {
+    page-break-inside: avoid;
+  }
+
+  .calendar-cell {
+    min-height: 92px !important;
+    page-break-inside: avoid;
+  }
+
+  .event-pill {
+    white-space: normal !important;
+    font-size: 10px !important;
+    padding: 1.5px 4px !important;
+  }
+}
