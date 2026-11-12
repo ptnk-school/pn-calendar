@@ -306,15 +306,15 @@
 
   <!-- ================= MODALS ================= -->
 
-  <!-- 1. LOGIN MODAL (Role & Department Selection) -->
+  <!-- 1. LOGIN MODAL (Single Shared PIN for All Departments) -->
   <div id="loginModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-fade-in">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 animate-fade-in">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
         <div class="flex items-center gap-2.5">
           <img src="logo.png" alt="Logo" class="w-9 h-9 object-contain" />
           <div>
-            <h3 class="font-display font-bold text-lg text-slate-900">เข้าสู่ระบบสารสนเทศกลุ่มงาน</h3>
-            <p class="text-xs text-slate-500">เลือกกลุ่มงานของคุณเพื่อเพิ่มหรือแก้ไขกิจกรรม/งานที่ต้องส่ง</p>
+            <h3 class="font-display font-bold text-lg text-slate-900">เข้าสู่ระบบแก้ไขปฏิทิน</h3>
+            <p class="text-xs text-slate-500">กรอกรหัสผ่านเพื่อเพิ่มหรือแก้ไขงานได้ทุกฝ่าย</p>
           </div>
         </div>
         <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
@@ -324,62 +324,17 @@
 
       <form onsubmit="handleLoginSubmit(event)" class="mt-4 space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">เลือกกลุ่มงาน / ฝ่าย</label>
-          <select id="loginDeptSelect" required class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="central">🏛️ ส่วนกลาง</option>
-            <option value="academic">📘 กลุ่มบริหารวิชาการ</option>
-            <option value="student">📗 กลุ่มบริหารกิจการนักเรียน</option>
-            <option value="general">📙 กลุ่มบริหารทั่วไป</option>
-            <option value="budget">📕 กลุ่มบริหารงบประมาณและแผน</option>
-            <option value="personnel">🟪 กลุ่มบริหารงานบุคคล</option>
-            <option value="admin">⭐ ผู้ดูแลระบบกลาง (แก้ไขได้ทุกกลุ่มงาน)</option>
-          </select>
-        </div>
-
-        <div class="bg-slate-50/80 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
-          <div class="flex items-center justify-between">
-            <label class="block text-xs font-semibold text-slate-700">ชื่อผู้บันทึก (ใส่เฉพาะชื่อจริง-นามสกุล ไม่ต้องมีคำนำหน้า)</label>
-          </div>
-          
-          <!-- Recent Staff Names Quick Select -->
-          <div id="recentStaffChipsContainer" class="hidden flex-wrap items-center gap-1.5 pb-1">
-            <!-- Rendered by JS -->
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div>
-              <input type="text" id="loginFirstName" required oninput="updateLoginNamePreview()" placeholder="ชื่อจริง (เช่น กานดา)" class="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <input type="text" id="loginLastName" oninput="updateLoginNamePreview()" placeholder="นามสกุล (เช่น ใจดี)" class="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-          </div>
-          <p class="text-[11px] text-slate-500 flex items-center justify-between">
-            <span>* ระบบตัดคำนำหน้า (นาย/นาง/น.ส./ครู) ออกให้อัตโนมัติเพื่อให้ชื่อตรงกัน</span>
-            <span id="loginNormalizedPreview" class="font-display font-semibold text-blue-700"></span>
-          </p>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่านประจำกลุ่มงาน (PIN)</label>
-          <input type="password" id="loginPasscode" required placeholder="กรอกรหัสผ่าน..." class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <div class="mt-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-            <p class="font-semibold text-slate-700">🔑 รหัสผ่านเริ่มต้นสำหรับทดสอบ:</p>
-            <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px]">
-              <span>• ส่วนกลาง: <code class="font-bold text-teal-600">6666</code></span>
-              <span>• วิชาการ: <code class="font-bold text-blue-600">1111</code></span>
-              <span>• กิจการนักเรียน: <code class="font-bold text-emerald-600">2222</code></span>
-              <span>• บริหารทั่วไป: <code class="font-bold text-amber-600">3333</code></span>
-              <span>• งบประมาณ: <code class="font-bold text-rose-600">4444</code></span>
-              <span>• บุคลากร: <code class="font-bold text-purple-600">5555</code></span>
-              <span class="col-span-2">• ผู้ดูแลระบบกลาง (ทุกฝ่าย): <code class="font-bold text-slate-900">9999</code></span>
-            </div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่าน (PIN)</label>
+          <input type="password" id="loginPasscode" required placeholder="กรอกรหัสผ่าน..." class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-center text-lg tracking-widest font-display focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div class="mt-2.5 p-2.5 bg-blue-50/70 rounded-xl border border-blue-200 text-xs text-blue-900 flex items-center justify-between">
+            <span>🔑 รหัสผ่านกลาง (แก้ไขได้ทุกฝ่าย):</span>
+            <code class="font-bold text-sm text-blue-700 bg-white px-2.5 py-0.5 rounded-lg border border-blue-200">1111</code>
           </div>
         </div>
 
-        <div id="loginErrorMsg" class="hidden text-xs text-rose-600 bg-rose-50 px-3 py-2 rounded-lg font-medium"></div>
+        <div id="loginErrorMsg" class="hidden text-xs text-rose-600 bg-rose-50 px-3 py-2 rounded-lg font-medium text-center"></div>
 
-        <div class="flex items-center justify-end gap-2 pt-2">
+        <div class="flex items-center justify-end gap-2 pt-1">
           <button type="button" onclick="closeLoginModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">ยกเลิก</button>
           <button type="submit" class="px-5 py-2 rounded-xl text-sm font-display font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm">เข้าสู่ระบบ</button>
         </div>
@@ -416,18 +371,18 @@
           <input type="text" id="eventTitleInput" required placeholder="เช่น ส่งแผนการจัดการเรียนรู้, ประชุมคณะกรรมการบริหารหลักสูตร" class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">กลุ่มงาน / ฝ่ายที่รับผิดชอบ <span class="text-rose-500">*</span></label>
-            <select id="eventDeptInput" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500">
-              <option value="central">ส่วนกลาง</option>
-              <option value="academic">กลุ่มบริหารวิชาการ</option>
-              <option value="student">กลุ่มบริหารกิจการนักเรียน</option>
-              <option value="general">กลุ่มบริหารทั่วไป</option>
-              <option value="budget">กลุ่มบริหารงบประมาณและแผน</option>
-              <option value="personnel">กลุ่มบริหารงานบุคคล</option>
-            </select>
+        <!-- เลือกฝ่ายงานได้หลายฝ่าย (Multi-Select Departments) -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-semibold text-slate-700">ฝ่ายงานที่รับผิดชอบ (เลือกได้มากกว่า 1 ฝ่าย) <span class="text-rose-500">*</span></label>
+            <button type="button" onclick="selectAllEventDepartments()" class="text-[11px] text-blue-600 hover:underline font-medium">เลือกทุกฝ่าย</button>
           </div>
+          <div id="eventDeptCheckboxesContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">ปีการศึกษา (พ.ศ.) <span class="text-rose-500">*</span></label>
             <select id="eventAcademicYearInput" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -436,11 +391,8 @@
               <option value="2570">2570</option>
             </select>
           </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">วันที่เริ่ม / วันที่กำหนดส่ง <span class="text-rose-500">*</span></label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">วันที่เริ่ม / กำหนดส่ง <span class="text-rose-500">*</span></label>
             <input type="date" id="eventStartDateInput" required onchange="syncEndDate()" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
@@ -486,15 +438,9 @@
           <input type="hidden" id="eventTimeInput" />
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">สถานที่จัด / ช่องทางส่งงาน</label>
-            <input type="text" id="eventLocationInput" placeholder="เช่น หอประชุมโรงเรียน หรือ ระบบออนไลน์" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อผู้บันทึก (ตัดคำนำหน้าอัตโนมัติ)</label>
-            <input type="text" id="eventStaffNameInput" oninput="previewEventStaffName()" placeholder="เช่น กานดา ใจดี" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">สถานที่จัด / ช่องทางส่งงาน</label>
+          <input type="text" id="eventLocationInput" placeholder="เช่น หอประชุมโรงเรียนพัฒนานิคม หรือ ระบบออนไลน์" class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
 
         <div>
@@ -518,9 +464,9 @@
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100">
       <div class="flex items-start justify-between gap-2">
         <div class="flex flex-wrap items-center gap-1.5">
-          <span id="detailDeptBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold">
-            กลุ่มงาน
-          </span>
+          <div id="detailDeptBadge" class="flex flex-wrap items-center gap-1.5">
+            <!-- Rendered by JS (Supports Multiple Departments) -->
+          </div>
           <!-- แสดงเฉพาะเมื่อเป็น "งานที่ต้องส่ง" -->
           <span id="detailSubmissionBadge" class="hidden items-center gap-1 px-3 py-1 rounded-full text-xs font-display font-bold bg-rose-600 text-white shadow-xs">
             📌 งานที่ต้องส่ง
@@ -573,9 +519,7 @@
         </p>
       </div>
 
-      <p id="detailUpdatedBy" class="mt-3 text-[11px] text-slate-400 text-right">
-        อัปเดตโดย: -
-      </p>
+      <p id="detailUpdatedBy" class="hidden"></p>
 
       <!-- Action Buttons -->
       <div id="detailActionButtons" class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">

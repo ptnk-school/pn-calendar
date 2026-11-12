@@ -11,12 +11,23 @@ const DEPARTMENTS = {
     id: 'central',
     name: 'ส่วนกลาง',
     shortName: 'ส่วนกลาง',
-    pin: '6666',
+    pin: '1111',
     dotClass: 'bg-teal-600',
     pillClass: 'bg-teal-50 text-teal-800 border border-teal-200',
     spanBarClass: 'bg-teal-600 text-white border border-teal-700',
     activeFilterClass: 'bg-teal-600 text-white border-teal-600 shadow-xs',
     inactiveFilterClass: 'bg-white text-slate-600 border-slate-200 hover:bg-teal-50'
+  },
+  director: {
+    id: 'director',
+    name: 'ฝ่ายอำนวยการ',
+    shortName: 'อำนวยการ',
+    pin: '1111',
+    dotClass: 'bg-indigo-600',
+    pillClass: 'bg-indigo-50 text-indigo-800 border border-indigo-200',
+    spanBarClass: 'bg-indigo-600 text-white border border-indigo-700',
+    activeFilterClass: 'bg-indigo-600 text-white border-indigo-600 shadow-xs',
+    inactiveFilterClass: 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50'
   },
   academic: {
     id: 'academic',
@@ -33,7 +44,7 @@ const DEPARTMENTS = {
     id: 'student',
     name: 'กลุ่มบริหารกิจการนักเรียน',
     shortName: 'กิจการนักเรียน',
-    pin: '2222',
+    pin: '1111',
     dotClass: 'bg-emerald-600',
     pillClass: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
     spanBarClass: 'bg-emerald-600 text-white border border-emerald-700',
@@ -44,7 +55,7 @@ const DEPARTMENTS = {
     id: 'general',
     name: 'กลุ่มบริหารทั่วไป',
     shortName: 'บริหารทั่วไป',
-    pin: '3333',
+    pin: '1111',
     dotClass: 'bg-amber-500',
     pillClass: 'bg-amber-50 text-amber-800 border border-amber-200',
     spanBarClass: 'bg-amber-500 text-white border border-amber-600',
@@ -55,7 +66,7 @@ const DEPARTMENTS = {
     id: 'budget',
     name: 'กลุ่มบริหารงบประมาณและแผน',
     shortName: 'งบประมาณ/แผน',
-    pin: '4444',
+    pin: '1111',
     dotClass: 'bg-rose-600',
     pillClass: 'bg-rose-50 text-rose-800 border border-rose-200',
     spanBarClass: 'bg-rose-600 text-white border border-rose-700',
@@ -66,7 +77,7 @@ const DEPARTMENTS = {
     id: 'personnel',
     name: 'กลุ่มบริหารงานบุคคล',
     shortName: 'งานบุคคล',
-    pin: '5555',
+    pin: '1111',
     dotClass: 'bg-purple-600',
     pillClass: 'bg-purple-50 text-purple-800 border border-purple-200',
     spanBarClass: 'bg-purple-600 text-white border border-purple-700',
@@ -75,7 +86,25 @@ const DEPARTMENTS = {
   }
 };
 
-const ADMIN_PIN = '9999';
+// รหัสผ่านกลาง (รองรับทั้ง 1111 และรหัสเดิมเพื่อให้ใช้งานได้สะดวกทันที)
+const SHARED_PINS = ['1111', '9999', '1234', '2222', '3333', '4444', '5555', '6666'];
+
+// ดึงรายการรหัสฝ่ายงานทั้งหมดของกิจกรรม (รองรับการเลือกหลายฝ่ายงาน เช่น "academic,student" หรือ ['academic', 'student'])
+function getEventDepartments(evt) {
+  if (!evt) return ['academic'];
+  if (Array.isArray(evt.departments) && evt.departments.length > 0) {
+    const valid = evt.departments.filter((d) => DEPARTMENTS[d]);
+    if (valid.length > 0) return valid;
+  }
+  if (evt.department) {
+    const parts = String(evt.department)
+      .split(',')
+      .map((s) => s.trim())
+      .filter((d) => DEPARTMENTS[d]);
+    if (parts.length > 0) return parts;
+  }
+  return ['academic'];
+}
 
 const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -1284,11 +1313,8 @@ function loadSettingsAndData() {
   const savedUser = localStorage.getItem('sc_current_user');
   if (savedUser) {
     try {
-      state.currentUser = JSON.parse(savedUser);
-      if (state.currentUser && state.currentUser.staffName) {
-        state.currentUser.staffName = normalizeStaffName(state.currentUser.staffName);
-        localStorage.setItem('sc_current_user', JSON.stringify(state.currentUser));
-      }
+      const parsedUser = JSON.parse(savedUser);
+      state.currentUser = parsedUser ? { role: 'admin' } : null;
     } catch (e) {
       state.currentUser = null;
     }
@@ -1516,8 +1542,11 @@ function isSubmissionTask(evt) {
 
 function getFilteredEvents() {
   return state.events.filter((evt) => {
-    if (state.selectedDepartment !== 'all' && evt.department !== state.selectedDepartment) {
-      return false;
+    if (state.selectedDepartment !== 'all') {
+      const evtDepts = getEventDepartments(evt);
+      if (!evtDepts.includes(state.selectedDepartment)) {
+        return false;
+      }
     }
     if (state.onlySubmission && !isSubmissionTask(evt)) {
       return false;
@@ -1526,7 +1555,10 @@ function getFilteredEvents() {
       return false;
     }
     if (state.searchQuery) {
-      const hay = `${evt.title} ${evt.location || ''} ${evt.description || ''} ${evt.updatedBy || ''}`.toLowerCase();
+      const deptNames = getEventDepartments(evt)
+        .map((d) => DEPARTMENTS[d]?.name || '')
+        .join(' ');
+      const hay = `${evt.title} ${evt.location || ''} ${evt.description || ''} ${deptNames}`.toLowerCase();
       if (!hay.includes(state.searchQuery)) return false;
     }
     return true;
@@ -1715,7 +1747,8 @@ function renderSingleSplitMonthRow(year, month, filteredEvents) {
       if (multiDayEventOnDay) {
         const isStart = multiDayEventOnDay.startDate === dateStr;
         const isEnd = multiDayEventOnDay.endDate === dateStr;
-        const deptColor = DEPARTMENTS[multiDayEventOnDay.department]?.dotClass || 'bg-blue-600';
+        const firstDeptId = getEventDepartments(multiDayEventOnDay)[0];
+        const deptColor = DEPARTMENTS[firstDeptId]?.dotClass || 'bg-blue-600';
         const barRadius = `${isStart ? 'rounded-l-full ml-1' : '-ml-px'} ${isEnd ? 'rounded-r-full mr-1' : '-mr-px'}`;
         dotIndicator = `<span class="block h-1 ${deptColor} ${barRadius} mt-1 opacity-90"></span>`;
       } else {
@@ -1789,9 +1822,22 @@ function renderSingleSplitMonthRow(year, month, filteredEvents) {
       <div class="divide-y divide-slate-200/80">
         ${monthEvents
           .map((evt) => {
-            const dept = DEPARTMENTS[evt.department] || DEPARTMENTS.academic;
+            const deptIds = getEventDepartments(evt);
+            const primaryDept = DEPARTMENTS[deptIds[0]] || DEPARTMENTS.academic;
             const isSub = isSubmissionTask(evt);
             const dateBadgeText = formatCompactThaiDateRange(evt.startDate, evt.endDate, year, month);
+
+            const deptPillsHtml = deptIds
+              .map((dId) => {
+                const dObj = DEPARTMENTS[dId];
+                if (!dObj) return '';
+                return `
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-display font-medium ${dObj.pillClass}">
+                    ${dObj.shortName}
+                  </span>
+                `;
+              })
+              .join('');
 
             return `
               <div
@@ -1805,7 +1851,7 @@ function renderSingleSplitMonthRow(year, month, filteredEvents) {
                 <div class="flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-3.5 min-w-0 flex-1">
                   <!-- คอลัมน์วันที่ (จัดแนวตรงกันทุกบรรทัด อ่านง่าย ไม่ปนกับชื่อกิจกรรม) -->
                   <div class="sm:w-36 shrink-0 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full ${isSub ? 'bg-rose-600' : dept.dotClass} shrink-0"></span>
+                    <span class="w-2 h-2 rounded-full ${isSub ? 'bg-rose-600' : primaryDept.dotClass} shrink-0"></span>
                     <span class="font-display font-bold text-xs sm:text-[13.5px] ${
                       isSub ? 'text-rose-700' : 'text-slate-800'
                     } tracking-tight">
@@ -1836,11 +1882,9 @@ function renderSingleSplitMonthRow(year, month, filteredEvents) {
                   </div>
                 </div>
 
-                <!-- ป้ายกลุ่มงานด้านขวา -->
-                <div class="flex items-center gap-2 shrink-0 self-start sm:self-center pl-3.5 sm:pl-0">
-                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-display font-medium ${dept.pillClass}">
-                    ${dept.shortName}
-                  </span>
+                <!-- ป้ายฝ่ายงานด้านขวา (รองรับหลายฝ่ายงาน) -->
+                <div class="flex flex-wrap items-center justify-end gap-1.5 shrink-0 self-start sm:self-center pl-3.5 sm:pl-0">
+                  ${deptPillsHtml}
                 </div>
               </div>
             `;
@@ -2132,7 +2176,9 @@ function renderMonthGrid(filteredEvents) {
           const itemsHtml = lane
             .map((item) => {
               const { evt, startCol, spanCols, isMultiDay, continuesLeft, continuesRight } = item;
-              const dept = DEPARTMENTS[evt.department] || DEPARTMENTS.academic;
+              const evtDepts = getEventDepartments(evt);
+              const dept = DEPARTMENTS[evtDepts[0]] || DEPARTMENTS.academic;
+              const allDeptNames = evtDepts.map((k) => DEPARTMENTS[k]?.shortName || k).join(', ');
               const isSub = isSubmissionTask(evt);
 
               // หากเป็นกิจกรรมหลายวัน ใช้แถบสีเข้มคาดยาวคร่อมวันให้เห็นชัดเจน
@@ -2154,16 +2200,22 @@ function renderMonthGrid(filteredEvents) {
                 ? ` (${formatDayNumber(evt.startDate)}–${formatDayNumber(evt.endDate)} ${formatShortThaiMonth(evt.endDate)})`
                 : '';
 
+              const multiDeptBadge =
+                evtDepts.length > 1
+                  ? `<span class="text-[9px] opacity-85 shrink-0 font-semibold">[${evtDepts.length} ฝ่าย]</span>`
+                  : '';
+
               return `
                 <div style="grid-column: ${startCol + 1} / span ${spanCols};" class="px-1">
                   <button
                     type="button"
                     onclick="event.stopPropagation(); openDetailModal('${evt.id}')"
                     class="event-pill ${pillStyleClass} ${edgeClass}"
-                    title="${isSub ? '[งานที่ต้องส่ง] ' : ''}${escapeHtml(evt.title)}${dateRangeShort} — ${dept.name}"
+                    title="${isSub ? '[งานที่ต้องส่ง] ' : ''}${escapeHtml(evt.title)}${dateRangeShort} — ${allDeptNames}"
                   >
                     ${submissionPrefix}
                     <span class="truncate">${escapeHtml(evt.title)}${dateRangeShort}</span>
+                    ${multiDeptBadge}
                     ${continuesRight ? `<span class="ml-auto text-[10px] opacity-90 shrink-0">▶</span>` : ''}
                   </button>
                 </div>
@@ -2225,7 +2277,18 @@ function renderListView(monthEvents) {
 
   container.innerHTML = sorted
     .map((evt) => {
-      const dept = DEPARTMENTS[evt.department] || DEPARTMENTS.academic;
+      const evtDepts = getEventDepartments(evt);
+      const deptBadgesHtml = evtDepts
+        .map((deptKey) => {
+          const d = DEPARTMENTS[deptKey] || DEPARTMENTS.academic;
+          return `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${d.pillClass}">
+              <span class="w-1.5 h-1.5 rounded-full ${d.dotClass}"></span>
+              ${d.name}
+            </span>
+          `;
+        })
+        .join('');
       const canEdit = canUserManageEvent(evt);
       const isSub = isSubmissionTask(evt);
 
@@ -2244,11 +2307,8 @@ function renderListView(monthEvents) {
               <div class="font-display font-bold text-lg leading-tight">${formatDayNumber(evt.startDate)}</div>
             </div>
             <div>
-              <div class="flex flex-wrap items-center gap-2 mb-1">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${dept.pillClass}">
-                  <span class="w-1.5 h-1.5 rounded-full ${dept.dotClass}"></span>
-                  ${dept.name}
-                </span>
+              <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                ${deptBadgesHtml}
                 ${
                   isSub
                     ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-display font-bold bg-rose-600 text-white shadow-xs">📌 งานที่ต้องส่ง</span>`
@@ -2289,99 +2349,9 @@ function renderListView(monthEvents) {
     .join('');
 }
 
-// ================= STAFF NAME NORMALIZATION & AUTHENTICATION =================
-// ฟังก์ชันตัดคำนำหน้าชื่อออกอัตโนมัติ เพื่อให้ชื่อผู้บันทึกเป็นรูปแบบเดียวกันเสมอ (เฉพาะ ชื่อจริง นามสกุล)
-function stripThaiPrefix(str) {
-  if (!str) return '';
-  let s = String(str).trim();
-  const prefixPattern =
-    /^(คุณครู|ครู|อาจารย์|อ\.|นางสาว|น\.ส\.|นาง|นาย|ด\.ช\.|ด\.ญ\.|ผอ\.|ผู้อำนวยการ|รองผอ\.|รองฯ|ดร\.|ผศ\.ดร\.|รศ\.ดร\.|ผศ\.|รศ\.|ศ\.|ว่าที่\s*ร\.ต\.หญิง|ว่าที่\s*ร\.ต\.|ว่าที่ร้อยตรีหญิง|ว่าที่ร้อยตรี|จ\.ส\.อ\.|ส\.อ\.|ร\.ต\.อ\.|ร\.ต\.ท\.|ร\.ต\.ต\.|คุณ)\s*/i;
-  // ตัดซ้ำกรณีมีหลายคำนำหน้า เช่น "ครู นายสมชาย"
-  while (prefixPattern.test(s)) {
-    s = s.replace(prefixPattern, '').trim();
-  }
-  return s.replace(/\s+/g, ' ').trim();
-}
-
-function normalizeStaffName(firstNameRaw, lastNameRaw = '') {
-  const cleanFirst = stripThaiPrefix(firstNameRaw);
-  const cleanLast = stripThaiPrefix(lastNameRaw);
-  return [cleanFirst, cleanLast].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-}
-
-function getRecentStaffNames() {
-  try {
-    const raw = localStorage.getItem('sc_recent_staff_names');
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveRecentStaffName(normalizedName) {
-  if (!normalizedName) return;
-  const list = getRecentStaffNames().filter((n) => n !== normalizedName);
-  list.unshift(normalizedName);
-  localStorage.setItem('sc_recent_staff_names', JSON.stringify(list.slice(0, 8)));
-}
-
-function renderRecentStaffChips() {
-  const container = document.getElementById('recentStaffChipsContainer');
-  if (!container) return;
-  const names = getRecentStaffNames();
-  if (names.length === 0) {
-    container.classList.add('hidden');
-    container.classList.remove('flex');
-    return;
-  }
-  container.classList.remove('hidden');
-  container.classList.add('flex');
-  container.innerHTML =
-    `<span class="text-[11px] text-slate-400 mr-0.5">เลือกชื่อเดิม:</span>` +
-    names
-      .map(
-        (name) => `
-        <button
-          type="button"
-          onclick="selectRecentStaffName('${escapeHtml(name)}')"
-          class="px-2.5 py-0.5 rounded-full text-[11px] font-display font-medium bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 transition"
-        >
-          ${escapeHtml(name)}
-        </button>
-      `
-      )
-      .join('');
-}
-
-function selectRecentStaffName(fullName) {
-  const parts = String(fullName || '').trim().split(/\s+/);
-  const firstInput = document.getElementById('loginFirstName');
-  const lastInput = document.getElementById('loginLastName');
-  if (firstInput) firstInput.value = parts[0] || '';
-  if (lastInput) lastInput.value = parts.slice(1).join(' ') || '';
-  updateLoginNamePreview();
-}
-
-function updateLoginNamePreview() {
-  const firstInput = document.getElementById('loginFirstName');
-  const lastInput = document.getElementById('loginLastName');
-  const previewEl = document.getElementById('loginNormalizedPreview');
-  if (!previewEl) return;
-  const normalized = normalizeStaffName(firstInput?.value || '', lastInput?.value || '');
-  previewEl.textContent = normalized ? `บันทึกเป็น: "${normalized}"` : '';
-}
-
-function previewEventStaffName() {
-  const input = document.getElementById('eventStaffNameInput');
-  if (!input) return;
-  // ไม่บังคับตัดขณะพิมพ์ทันทีจนพิมพ์ยาก แต่ตัดคำนำหน้าเมื่อบันทึก
-}
-
-function canUserManageEvent(evt) {
-  if (!state.currentUser) return false;
-  if (state.currentUser.role === 'admin') return true;
-  return state.currentUser.role === evt.department;
+// ================= AUTHENTICATION (รหัสผ่านเดียวจัดการได้ทุกฝ่ายงาน) =================
+function canUserManageEvent() {
+  return Boolean(state.currentUser);
 }
 
 function renderUserStatus() {
@@ -2398,7 +2368,7 @@ function renderUserStatus() {
     container.innerHTML = `
       <button onclick="openLoginModal()" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-display font-medium text-xs sm:text-sm px-3 sm:px-3.5 py-2 rounded-xl transition">
         <i data-lucide="log-in" class="w-4 h-4 text-blue-600"></i>
-        <span>เข้าสู่ระบบสารสนเทศ</span>
+        <span>เข้าสู่ระบบแก้ไข</span>
       </button>
     `;
   } else {
@@ -2406,22 +2376,17 @@ function renderUserStatus() {
     btnAdd.classList.add('flex');
     banner.classList.remove('hidden');
 
-    const roleName =
-      state.currentUser.role === 'admin'
-        ? 'ผู้ดูแลระบบกลาง (จัดการได้ทุกกลุ่มงาน)'
-        : DEPARTMENTS[state.currentUser.role]?.name || '';
-
-    bannerText.innerHTML = `ผู้บันทึก: <strong>${escapeHtml(state.currentUser.staffName)}</strong> — สิทธิ์อัปเดตงานของ <strong>${roleName}</strong> <button onclick="openLoginModal()" class="ml-2 underline text-blue-700 hover:text-blue-900 text-xs">(เปลี่ยนชื่อ/สลับฝ่าย)</button>`;
+    bannerText.innerHTML = `สถานะ: <strong>โหมดแก้ไขข้อมูลปฏิทิน</strong> — สามารถเพิ่ม/แก้ไขกิจกรรมและเลือกฝ่ายงานได้ทุกฝ่าย`;
 
     container.innerHTML = `
       <div class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 pl-3 pr-1.5 py-1.5 rounded-xl">
-        <button onclick="openLoginModal()" title="คลิกเพื่อแก้ไขชื่อผู้บันทึกหรือเปลี่ยนกลุ่มงาน" class="text-left text-xs leading-tight hover:opacity-80 transition">
+        <div class="text-left text-xs leading-tight">
           <div class="font-display font-semibold text-blue-950 flex items-center gap-1">
-            <span>${escapeHtml(state.currentUser.staffName)}</span>
-            <i data-lucide="pencil" class="w-3 h-3 text-blue-600"></i>
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>โหมดแก้ไขข้อมูล</span>
           </div>
-          <div class="text-[10px] text-blue-700 hidden sm:block">${roleName}</div>
-        </button>
+          <div class="text-[10px] text-blue-700 hidden sm:block">จัดการได้ทุกฝ่ายงาน</div>
+        </div>
         <button onclick="handleLogout()" title="ออกจากระบบ" class="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-white rounded-lg transition">
           <i data-lucide="log-out" class="w-4 h-4"></i>
         </button>
@@ -2435,18 +2400,11 @@ function renderUserStatus() {
 function openLoginModal() {
   document.getElementById('loginErrorMsg').classList.add('hidden');
   document.getElementById('loginPasscode').value = '';
-
-  if (state.currentUser) {
-    document.getElementById('loginDeptSelect').value = state.currentUser.role;
-    selectRecentStaffName(state.currentUser.staffName);
-  } else {
-    updateLoginNamePreview();
-  }
-
-  renderRecentStaffChips();
-
   document.getElementById('loginModal').classList.remove('hidden');
   document.getElementById('loginModal').classList.add('flex');
+  setTimeout(() => {
+    document.getElementById('loginPasscode')?.focus();
+  }, 50);
 }
 
 function closeLoginModal() {
@@ -2456,34 +2414,21 @@ function closeLoginModal() {
 
 function handleLoginSubmit(e) {
   e.preventDefault();
-  const role = document.getElementById('loginDeptSelect').value;
-  const firstRaw = document.getElementById('loginFirstName')?.value || '';
-  const lastRaw = document.getElementById('loginLastName')?.value || '';
-  const staffName = normalizeStaffName(firstRaw, lastRaw);
   const pin = document.getElementById('loginPasscode').value.trim();
   const errEl = document.getElementById('loginErrorMsg');
 
-  if (!staffName) {
-    errEl.textContent = 'กรุณาระบุชื่อผู้บันทึก (ไม่ต้องใส่คำนำหน้า)';
+  if (!SHARED_PINS.includes(pin)) {
+    errEl.textContent = 'รหัสผ่านไม่ถูกต้อง (ใช้รหัส 1111)';
     errEl.classList.remove('hidden');
     return;
   }
 
-  const expectedPin = role === 'admin' ? ADMIN_PIN : DEPARTMENTS[role]?.pin;
-
-  if (pin !== expectedPin) {
-    errEl.textContent = 'รหัสผ่านประจำกลุ่มงานไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
-    errEl.classList.remove('hidden');
-    return;
-  }
-
-  state.currentUser = { role, staffName };
+  state.currentUser = { role: 'admin' };
   localStorage.setItem('sc_current_user', JSON.stringify(state.currentUser));
-  saveRecentStaffName(staffName);
   closeLoginModal();
   renderUserStatus();
   renderAll();
-  showToast(`เข้าสู่ระบบในชื่อ "${staffName}" เรียบร้อยแล้ว`, 'success');
+  showToast('เข้าสู่ระบบแก้ไขข้อมูลเรียบร้อยแล้ว', 'success');
 }
 
 function handleLogout() {
@@ -2491,7 +2436,68 @@ function handleLogout() {
   localStorage.removeItem('sc_current_user');
   renderUserStatus();
   renderAll();
-  showToast('ออกจากระบบสารสนเทศเรียบร้อยแล้ว', 'info');
+  showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
+}
+
+// ================= MULTI-DEPARTMENT CHECKBOXES =================
+function renderEventDepartmentCheckboxes(selectedDepts = ['central']) {
+  const container = document.getElementById('eventDeptCheckboxesContainer');
+  if (!container) return;
+
+  const selectedSet = new Set(Array.isArray(selectedDepts) && selectedDepts.length ? selectedDepts : ['central']);
+
+  container.innerHTML = Object.values(DEPARTMENTS)
+    .map((dept) => {
+      const checked = selectedSet.has(dept.key);
+      return `
+        <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none ${
+          checked
+            ? 'bg-blue-50 border-blue-400 text-blue-950 font-semibold shadow-2xs'
+            : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+        }">
+          <input
+            type="checkbox"
+            name="eventDeptCheckbox"
+            value="${dept.key}"
+            ${checked ? 'checked' : ''}
+            onchange="updateDeptCheckboxLabelStyles()"
+            class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span class="w-2 h-2 rounded-full ${dept.dotClass} shrink-0"></span>
+          <span class="text-xs font-display truncate">${dept.name}</span>
+        </label>
+      `;
+    })
+    .join('');
+}
+
+function updateDeptCheckboxLabelStyles() {
+  const container = document.getElementById('eventDeptCheckboxesContainer');
+  if (!container) return;
+  const inputs = container.querySelectorAll('input[name="eventDeptCheckbox"]');
+  inputs.forEach((input) => {
+    const label = input.closest('label');
+    if (!label) return;
+    if (input.checked) {
+      label.className =
+        'flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-blue-50 border-blue-400 text-blue-950 font-semibold shadow-2xs';
+    } else {
+      label.className =
+        'flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100';
+    }
+  });
+}
+
+function selectAllEventDepartments() {
+  const container = document.getElementById('eventDeptCheckboxesContainer');
+  if (!container) return;
+  const inputs = Array.from(container.querySelectorAll('input[name="eventDeptCheckbox"]'));
+  const allChecked = inputs.every((i) => i.checked);
+  inputs.forEach((i, idx) => {
+    // หากเลือกครบทุกฝ่ายอยู่แล้ว กดซ้ำให้เหลือเฉพาะส่วนกลาง
+    i.checked = allChecked ? idx === 0 : true;
+  });
+  updateDeptCheckboxLabelStyles();
 }
 
 // ================= TIME INPUT HELPERS (ตลอดทั้งวัน / เวลาเริ่ม - เวลาสิ้นสุด) =================
@@ -2589,9 +2595,7 @@ function openEventModal(editEventId = null, defaultDate = null) {
 
   const modal = document.getElementById('eventFormModal');
   const titleEl = document.getElementById('eventModalTitle');
-  const deptSelect = document.getElementById('eventDeptInput');
   const isSubmissionCheckbox = document.getElementById('eventIsSubmissionInput');
-  const staffNameInput = document.getElementById('eventStaffNameInput');
 
   if (editEventId) {
     const evt = state.events.find((x) => x.id === editEventId);
@@ -2600,7 +2604,7 @@ function openEventModal(editEventId = null, defaultDate = null) {
     titleEl.textContent = 'แก้ไขข้อมูลรายการในปฏิทิน';
     document.getElementById('eventIdInput').value = evt.id;
     document.getElementById('eventTitleInput').value = evt.title;
-    deptSelect.value = evt.department;
+    renderEventDepartmentCheckboxes(getEventDepartments(evt));
     document.getElementById('eventAcademicYearInput').value = evt.academicYear || '2569';
     document.getElementById('eventStartDateInput').value = evt.startDate;
     document.getElementById('eventEndDateInput').value = evt.endDate;
@@ -2609,12 +2613,6 @@ function openEventModal(editEventId = null, defaultDate = null) {
     document.getElementById('eventLocationInput').value = evt.location || '';
     document.getElementById('eventDescInput').value = evt.description || '';
     isSubmissionCheckbox.checked = isSubmissionTask(evt);
-
-    // ดึงชื่อผู้บันทึกเดิม (ตัดวงเล็บกลุ่มงานออกเพื่อให้แก้ไขเฉพาะชื่อจริง-นามสกุลได้ง่าย)
-    const rawRecorder = String(evt.updatedBy || '').replace(/\s*\(.*?\)\s*$/, '').trim();
-    if (staffNameInput) {
-      staffNameInput.value = normalizeStaffName(rawRecorder) || state.currentUser.staffName;
-    }
   } else {
     titleEl.textContent = 'เพิ่มงาน / กิจกรรมโรงเรียนพัฒนานิคม';
     document.getElementById('eventIdInput').value = '';
@@ -2631,18 +2629,9 @@ function openEventModal(editEventId = null, defaultDate = null) {
     document.getElementById('eventLocationInput').value = '';
     document.getElementById('eventDescInput').value = '';
 
-    if (staffNameInput) {
-      staffNameInput.value = state.currentUser.staffName || '';
-    }
-
-    if (state.currentUser.role !== 'admin') {
-      deptSelect.value = state.currentUser.role;
-    } else {
-      deptSelect.value = state.selectedDepartment !== 'all' ? state.selectedDepartment : 'central';
-    }
+    const defaultDept = state.selectedDepartment !== 'all' ? state.selectedDepartment : 'central';
+    renderEventDepartmentCheckboxes([defaultDept]);
   }
-
-  deptSelect.disabled = state.currentUser.role !== 'admin';
 
   modal.classList.remove('hidden');
   modal.classList.add('flex');
@@ -2676,28 +2665,25 @@ async function handleEventFormSubmit(e) {
     return;
   }
 
-  const department =
-    state.currentUser.role === 'admin'
-      ? document.getElementById('eventDeptInput').value
-      : state.currentUser.role;
+  const checkedInputs = Array.from(
+    document.querySelectorAll('#eventDeptCheckboxesContainer input[name="eventDeptCheckbox"]:checked')
+  );
+  const selectedDepts = checkedInputs.map((i) => i.value);
+
+  if (selectedDepts.length === 0) {
+    showToast('กรุณาเลือกฝ่ายงานที่รับผิดชอบอย่างน้อย 1 ฝ่าย', 'error');
+    return;
+  }
 
   const isSubmission = document.getElementById('eventIsSubmissionInput').checked;
   const formattedTime = buildEventTimeFromInputs(isSubmission);
-
-  // จัดรูปแบบชื่อผู้บันทึกให้เป็นมาตรฐานเดียวกันเสมอ (ตัดคำนำหน้าอัตโนมัติ)
-  const rawStaffInput = document.getElementById('eventStaffNameInput')?.value || state.currentUser.staffName;
-  const cleanStaffName = normalizeStaffName(rawStaffInput) || state.currentUser.staffName;
-  if (cleanStaffName && cleanStaffName !== state.currentUser.staffName) {
-    state.currentUser.staffName = cleanStaffName;
-    localStorage.setItem('sc_current_user', JSON.stringify(state.currentUser));
-    saveRecentStaffName(cleanStaffName);
-    renderUserStatus();
-  }
+  const deptShortNames = selectedDepts.map((k) => DEPARTMENTS[k]?.shortName || k).join(', ');
 
   const payload = {
     id: existingId || `evt-${Date.now()}`,
     title: document.getElementById('eventTitleInput').value.trim(),
-    department,
+    department: selectedDepts.join(','),
+    departments: selectedDepts,
     academicYear: document.getElementById('eventAcademicYearInput').value,
     startDate,
     endDate,
@@ -2705,7 +2691,7 @@ async function handleEventFormSubmit(e) {
     location: document.getElementById('eventLocationInput').value.trim(),
     description: document.getElementById('eventDescInput').value.trim(),
     isSubmission,
-    updatedBy: `${cleanStaffName} (${DEPARTMENTS[department]?.shortName || 'ผู้ดูแล'})`
+    updatedBy: deptShortNames
   };
 
   if (existingId) {
@@ -2730,10 +2716,17 @@ function openDetailModal(eventId) {
   const evt = state.events.find((x) => x.id === eventId);
   if (!evt) return;
 
-  const dept = DEPARTMENTS[evt.department] || DEPARTMENTS.academic;
-  const badge = document.getElementById('detailDeptBadge');
-  badge.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${dept.pillClass}`;
-  badge.innerHTML = `<span class="w-2 h-2 rounded-full ${dept.dotClass}"></span> ${dept.name}`;
+  const evtDepts = getEventDepartments(evt);
+  const badgeContainer = document.getElementById('detailDeptBadge');
+  badgeContainer.className = 'flex flex-wrap items-center gap-1.5';
+  badgeContainer.innerHTML = evtDepts
+    .map((deptKey) => {
+      const dept = DEPARTMENTS[deptKey] || DEPARTMENTS.academic;
+      return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${dept.pillClass}">
+        <span class="w-2 h-2 rounded-full ${dept.dotClass}"></span> ${dept.name}
+      </span>`;
+    })
+    .join('');
 
   const subBadge = document.getElementById('detailSubmissionBadge');
   const isSub = isSubmissionTask(evt);
@@ -2755,7 +2748,7 @@ function openDetailModal(eventId) {
   document.getElementById('detailLocationText').textContent = evt.location || 'ไม่ระบุสถานที่';
   document.getElementById('detailYearText').textContent = `ปีการศึกษา ${evt.academicYear || '-'}`;
   document.getElementById('detailDescText').textContent = evt.description || 'ไม่มีรายละเอียดเพิ่มเติม';
-  document.getElementById('detailUpdatedBy').textContent = `อัปเดตโดย: ${evt.updatedBy || 'เจ้าหน้าที่สารสนเทศ'}`;
+  document.getElementById('detailUpdatedBy').textContent = '';
 
   const btnEdit = document.getElementById('btnEditCurrentEvent');
   const btnDelete = document.getElementById('btnDeleteCurrentEvent');
@@ -2772,15 +2765,13 @@ function openDetailModal(eventId) {
     btnDelete.classList.remove('hidden');
     btnDelete.classList.add('inline-flex');
     btnDelete.onclick = () => handleDeleteEvent(evt.id);
-    hint.textContent = 'คุณมีสิทธิ์แก้ไข/ลบรายการนี้';
+    hint.textContent = 'คุณสามารถแก้ไข/ลบรายการนี้ได้';
   } else {
     btnEdit.classList.add('hidden');
     btnEdit.classList.remove('inline-flex');
     btnDelete.classList.add('hidden');
     btnDelete.classList.remove('inline-flex');
-    hint.textContent = state.currentUser
-      ? `เฉพาะสารสนเทศ${dept.shortName}เท่านั้นที่แก้ไขได้`
-      : 'เข้าสู่ระบบสารสนเทศเพื่อแก้ไข';
+    hint.textContent = 'เข้าสู่ระบบด้วยรหัสผ่านเพื่อแก้ไข';
   }
 
   const modal = document.getElementById('eventDetailModal');
@@ -2905,28 +2896,28 @@ function exportToCSV() {
     'รหัส',
     'ประเภท',
     'ชื่อกิจกรรม/งานที่ต้องส่ง',
-    'กลุ่มงานที่รับผิดชอบ',
+    'ฝ่ายงานที่รับผิดชอบ',
     'ปีการศึกษา',
     'วันที่เริ่มต้น/กำหนดส่ง',
     'วันที่สิ้นสุด',
     'เวลา',
     'สถานที่/ช่องทางส่ง',
-    'รายละเอียด',
-    'ผู้บันทึกข้อมูล'
+    'รายละเอียด'
   ];
 
   const rows = filtered.map((e) => [
     e.id,
     isSubmissionTask(e) ? 'งานที่ต้องส่ง' : 'กิจกรรม',
     e.title,
-    DEPARTMENTS[e.department]?.name || e.department,
+    getEventDepartments(e)
+      .map((k) => DEPARTMENTS[k]?.name || k)
+      .join(', '),
     e.academicYear,
     e.startDate,
     e.endDate,
     e.time || '',
     e.location || '',
-    (e.description || '').replace(/\n/g, ' '),
-    e.updatedBy || ''
+    (e.description || '').replace(/\n/g, ' ')
   ]);
 
   const csvContent =
