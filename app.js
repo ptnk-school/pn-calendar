@@ -1200,58 +1200,197 @@ const DEFAULT_SAMPLE_EVENTS = [
   }
 ];
 
-// วันหยุดราชการและวันสำคัญ (สำหรับไฮไลต์ช่องสีแดงในปฏิทินย่อ และแสดงหมายเหตุใต้ตารางปฏิทินเหมือนต้นฉบับ)
-const THAI_HOLIDAYS = {
-  '2026-10-13': 'วันนวมินทรมหาราช',
-  '2026-10-23': 'วันปิยมหาราช',
-  '2026-12-05': 'วันคล้ายวันพระบรมราชสมภพ ร.9 / วันพ่อแห่งชาติ',
-  '2026-12-07': 'หยุดชดเชยวันพ่อแห่งชาติ',
-  '2026-12-10': 'วันรัฐธรรมนูญ',
-  '2026-12-31': 'หยุดวันสิ้นปี',
-  '2027-01-01': 'หยุดวันขึ้นปีใหม่',
-  '2027-02-21': 'วันมาฆบูชา',
-  '2027-02-22': 'หยุดชดเชยวันมาฆบูชา',
-  '2027-04-06': 'วันจักรี',
-  '2027-04-13': 'วันสงกรานต์',
-  '2027-04-14': 'วันสงกรานต์',
-  '2027-04-15': 'วันสงกรานต์',
-  '2027-05-04': 'วันฉัตรมงคล',
-  '2027-05-20': 'วันวิสาขบูชา',
-  '2027-06-03': 'วันเฉลิมพระชนมพรรษา สมเด็จพระนางเจ้าฯ พระบรมราชินี',
-  '2027-07-18': 'วันอาสาฬหบูชา',
-  '2027-07-19': 'วันเข้าพรรษา / หยุดชดเชย',
-  '2027-07-28': 'วันเฉลิมพระชนมพรรษา รัชกาลที่ 10',
-  '2027-08-12': 'วันเฉลิมพระชนมพรรษา พระบรมราชชนนีพันปีหลวง / วันแม่แห่งชาติ'
+// ================= ระบบคำนวณวันหยุดราชการและวันสำคัญอัตโนมัติสำหรับทุกปี พ.ศ. =================
+// 1) วันหยุดราชการประจำปีที่ตรงกับวันที่เดิมทุกปี (Fixed Annual Public Holidays)
+const FIXED_ANNUAL_THAI_HOLIDAYS = [
+  { mmdd: '01-01', name: 'หยุดวันขึ้นปีใหม่', subName: 'หยุดชดเชยวันขึ้นปีใหม่' },
+  { mmdd: '04-06', name: 'วันจักรี', subName: 'หยุดชดเชยวันจักรี' },
+  { mmdd: '04-13', name: 'วันสงกรานต์', subName: 'หยุดชดเชยวันสงกรานต์' },
+  { mmdd: '04-14', name: 'วันสงกรานต์', subName: 'หยุดชดเชยวันสงกรานต์' },
+  { mmdd: '04-15', name: 'วันสงกรานต์', subName: 'หยุดชดเชยวันสงกรานต์' },
+  { mmdd: '05-04', name: 'วันฉัตรมงคล', subName: 'หยุดชดเชยวันฉัตรมงคล' },
+  { mmdd: '06-03', name: 'วันเฉลิมพระชนมพรรษา สมเด็จพระนางเจ้าฯ พระบรมราชินี', subName: 'หยุดชดเชยวันเฉลิมฯ พระบรมราชินี' },
+  { mmdd: '07-28', name: 'วันเฉลิมพระชนมพรรษา รัชกาลที่ 10', subName: 'หยุดชดเชยวันเฉลิมฯ รัชกาลที่ 10' },
+  { mmdd: '08-12', name: 'วันเฉลิมพระชนมพรรษา พระบรมราชชนนีพันปีหลวง / วันแม่แห่งชาติ', subName: 'หยุดชดเชยวันแม่แห่งชาติ' },
+  { mmdd: '10-13', name: 'วันนวมินทรมหาราช', subName: 'หยุดชดเชยวันนวมินทรมหาราช' },
+  { mmdd: '10-23', name: 'วันปิยมหาราช', subName: 'หยุดชดเชยวันปิยมหาราช' },
+  { mmdd: '12-05', name: 'วันคล้ายวันพระบรมราชสมภพ ร.9 / วันพ่อแห่งชาติ', subName: 'หยุดชดเชยวันพ่อแห่งชาติ' },
+  { mmdd: '12-10', name: 'วันรัฐธรรมนูญ', subName: 'หยุดชดเชยวันรัฐธรรมนูญ' },
+  { mmdd: '12-31', name: 'หยุดวันสิ้นปี', subName: 'หยุดชดเชยวันสิ้นปี' }
+];
+
+// 2) วันสำคัญทางพุทธศาสนา (มาฆบูชา, วิสาขบูชา, อาสาฬหบูชา, เข้าพรรษา) ตามปฏิทินจันทรคติ (ค.ศ. 2024 - 2036 / พ.ศ. 2567 - 2579)
+const LUNAR_THAI_HOLIDAYS_BY_YEAR = {
+  2024: [
+    { mmdd: '02-24', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-22', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-20', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-21', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2025: [
+    { mmdd: '02-12', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-11', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-10', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-11', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2026: [
+    { mmdd: '03-03', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-31', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-29', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-30', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2027: [
+    { mmdd: '02-21', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-20', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-18', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-19', name: 'วันเข้าพรรษา / หยุดชดเชย', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2028: [
+    { mmdd: '02-10', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-08', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-06', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-07', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2029: [
+    { mmdd: '02-28', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-27', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-25', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-26', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2030: [
+    { mmdd: '02-17', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-15', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-14', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-15', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2031: [
+    { mmdd: '03-07', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '06-04', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '08-01', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '08-02', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2032: [
+    { mmdd: '02-25', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-23', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-21', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-22', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2033: [
+    { mmdd: '02-13', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-13', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-11', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-12', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2034: [
+    { mmdd: '03-04', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '06-01', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-30', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-31', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2035: [
+    { mmdd: '02-22', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-21', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-19', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-20', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ],
+  2036: [
+    { mmdd: '02-11', name: 'วันมาฆบูชา', subName: 'หยุดชดเชยวันมาฆบูชา' },
+    { mmdd: '05-09', name: 'วันวิสาขบูชา', subName: 'หยุดชดเชยวันวิสาขบูชา' },
+    { mmdd: '07-07', name: 'วันอาสาฬหบูชา', subName: 'หยุดชดเชยวันอาสาฬหบูชา' },
+    { mmdd: '07-08', name: 'วันเข้าพรรษา', subName: 'หยุดชดเชยวันเข้าพรรษา' }
+  ]
 };
 
-// ลำดับเดือนในปีงบประมาณ 2570 (ต.ค. 2569 – ก.ย. 2570)
-const FISCAL_YEAR_2570_MONTHS = [
-  { year: 2026, month: 9 },  // ต.ค. 69
-  { year: 2026, month: 10 }, // พ.ย. 69
-  { year: 2026, month: 11 }, // ธ.ค. 69
-  { year: 2027, month: 0 },  // ม.ค. 70
-  { year: 2027, month: 1 },  // ก.พ. 70
-  { year: 2027, month: 2 },  // มี.ค. 70
-  { year: 2027, month: 3 },  // เม.ย. 70
-  { year: 2027, month: 4 },  // พ.ค. 70
-  { year: 2027, month: 5 },  // มิ.ย. 70
-  { year: 2027, month: 6 },  // ก.ค. 70
-  { year: 2027, month: 7 },  // ส.ค. 70
-  { year: 2027, month: 8 }   // ก.ย. 70
-];
+const generatedHolidaysCache = {};
+
+// คำนวณวันหยุดราชการและวันหยุดชดเชยอัตโนมัติสำหรับปี ค.ศ. ใดๆ
+function getAutoHolidaysForGregorianYear(year) {
+  if (generatedHolidaysCache[year]) return generatedHolidaysCache[year];
+
+  const map = {};
+  const allEntries = [...FIXED_ANNUAL_THAI_HOLIDAYS, ...(LUNAR_THAI_HOLIDAYS_BY_YEAR[year] || [])];
+
+  // 1. ใส่วันหยุดหลักทั้งหมดก่อน
+  allEntries.forEach((h) => {
+    const dateStr = `${year}-${h.mmdd}`;
+    map[dateStr] = h.name;
+  });
+
+  // 2. คำนวณวันหยุดชดเชยอัตโนมัติเมื่อวันหยุดหลักตรงกับวันเสาร์ (6) หรือวันอาทิตย์ (0)
+  // ยกเว้นปี 2027 ที่ 18 ก.ค. (อาสาฬหบูชา) กับ 19 ก.ค. (เข้าพรรษา) รวมเป็น "วันเข้าพรรษา / หยุดชดเชย" ตามต้นฉบับโรงเรียน
+  allEntries.forEach((h) => {
+    if (year === 2027 && h.mmdd === '07-18') return;
+    if (h.mmdd === '12-31') return; // วันสิ้นปีชดเชยข้ามไปต้นเดือนมกราคมปีถัดไป
+
+    const [mm, dd] = h.mmdd.split('-').map((n) => parseInt(n, 10));
+    const dObj = new Date(year, mm - 1, dd);
+    const dow = dObj.getDay();
+    if (dow === 0 || dow === 6) {
+      // เลื่อนไปหาวันทำการถัดไป (จันทร์-ศุกร์) ที่ยังไม่มีวันหยุดราชการ
+      const nextDate = new Date(year, mm - 1, dd + 1);
+      while (nextDate.getDay() === 0 || nextDate.getDay() === 6 || map[formatDateYMD(nextDate)]) {
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+      const subDateStr = formatDateYMD(nextDate);
+      if (nextDate.getFullYear() === year) {
+        map[subDateStr] = h.subName || `หยุดชดเชย${h.name}`;
+      }
+    }
+  });
+
+  generatedHolidaysCache[year] = map;
+  return map;
+}
+
+// ดึงชื่อวันหยุดของวันที่ YYYY-MM-DD (รวมวันหยุดอัตโนมัติ + วันหยุดที่ผู้ใช้เพิ่ม/แก้ไขเอง)
+function getThaiHoliday(dateStr) {
+  if (!dateStr) return null;
+  if (state.customHolidays && Object.prototype.hasOwnProperty.call(state.customHolidays, dateStr)) {
+    // หากค่าเป็น '' แปลว่าผู้ใช้ลบวันหยุดนั้นออก
+    return state.customHolidays[dateStr] || null;
+  }
+  const year = parseInt(dateStr.slice(0, 4), 10);
+  if (!year) return null;
+  const yearMap = getAutoHolidaysForGregorianYear(year);
+  return yearMap[dateStr] || null;
+}
+
+// สร้างลำดับ 12 เดือนของปีงบประมาณ พ.ศ. ที่ระบุ (ต.ค. ปีก่อนหน้า – ก.ย. ปีที่เลือก)
+function getFiscalYearMonths(fiscalYearBE = state.selectedFiscalYear) {
+  const fy = parseInt(fiscalYearBE, 10) || 2570;
+  const startGregorianYear = fy - 543 - 1; // เช่น ปีงบฯ 2570 เริ่ม ต.ค. 2569 (ค.ศ. 2026)
+  const endGregorianYear = fy - 543;       // สิ้นสุด ก.ย. 2570 (ค.ศ. 2027)
+  return [
+    { year: startGregorianYear, month: 9 },  // ต.ค.
+    { year: startGregorianYear, month: 10 }, // พ.ย.
+    { year: startGregorianYear, month: 11 }, // ธ.ค.
+    { year: endGregorianYear, month: 0 },    // ม.ค.
+    { year: endGregorianYear, month: 1 },    // ก.พ.
+    { year: endGregorianYear, month: 2 },    // มี.ค.
+    { year: endGregorianYear, month: 3 },    // เม.ย.
+    { year: endGregorianYear, month: 4 },    // พ.ค.
+    { year: endGregorianYear, month: 5 },    // มิ.ย.
+    { year: endGregorianYear, month: 6 },    // ก.ค.
+    { year: endGregorianYear, month: 7 },    // ส.ค.
+    { year: endGregorianYear, month: 8 }     // ก.ย.
+  ];
+}
 
 // 3. State ของแอปพลิเคชัน
 let state = {
   events: [],
   currentYear: new Date().getFullYear(), // ค.ศ.
   currentMonth: new Date().getMonth(),   // 0 - 11
+  selectedFiscalYear: 2570,              // ปีงบประมาณ พ.ศ. ที่กำลังเปิดดู (เช่น 2570 = ต.ค. 69 - ก.ย. 70)
+  fiscalYears: [2568, 2569, 2570, 2571, 2572], // รายการปีที่เปิดให้เลือก (กด + เพิ่มปีไปได้เรื่อยๆ ไม่จำกัด)
+  customHolidays: {},                    // วันหยุดพิเศษที่เพิ่มหรือแก้ไขเอง { 'YYYY-MM-DD': 'ชื่อวันหยุด' }
   selectedDepartment: 'all',
   onlySubmission: false, // กรองเฉพาะงานที่ต้องส่ง
   selectedAcademicYear: 'all',
   searchQuery: '',
   viewMode: 'split', // 'split' (ตารางปฏิทินคู่ภารกิจ) | 'month' | 'list'
-  tableMonthScope: 'all', // 'all' (แสดงทุกเดือน ต.ค. 69 - ก.ย. 70) | 'single' (ดูทีละเดือน)
-  currentUser: null, // { role: 'academic'|...|'admin', staffName: '...' }
+  tableMonthScope: 'all', // 'all' (แสดงทุกเดือนในรอบปี) | 'single' (ดูทีละเดือน)
+  currentUser: null, // { role: 'admin' }
   schoolName: 'โรงเรียนพัฒนานิคม สพม.ลพบุรี',
   scriptUrl: ''
 };
@@ -1262,6 +1401,7 @@ let deferredInstallPrompt = null;
 document.addEventListener('DOMContentLoaded', () => {
   initPWA();
   loadSettingsAndData();
+  renderYearSelectors();
   renderDepartmentFilters();
   renderDepartmentLegend();
   renderUserStatus();
@@ -1275,7 +1415,7 @@ function initPWA() {
   if ('caches' in window) {
     caches.keys().then((keys) => {
       keys.forEach((key) => {
-        if (key !== 'school-calendar-v9') {
+        if (key !== 'school-calendar-v10') {
           caches.delete(key);
         }
       });
@@ -1283,7 +1423,7 @@ function initPWA() {
   }
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker
-      .register('./sw.js?v=9', { updateViaCache: 'none' })
+      .register('./sw.js?v=10', { updateViaCache: 'none' })
       .then((reg) => {
         reg.update();
       })
@@ -1353,6 +1493,34 @@ function loadSettingsAndData() {
       state.currentUser = parsedUser ? { role: 'admin' } : null;
     } catch (e) {
       state.currentUser = null;
+    }
+  }
+
+  const savedFiscalYears = localStorage.getItem('sc_fiscal_years');
+  if (savedFiscalYears) {
+    try {
+      const parsedFY = JSON.parse(savedFiscalYears);
+      if (Array.isArray(parsedFY) && parsedFY.length > 0) {
+        state.fiscalYears = Array.from(new Set([2568, 2569, 2570, 2571, 2572, ...parsedFY])).sort((a, b) => a - b);
+      }
+    } catch (e) {}
+  }
+
+  const savedSelectedFY = localStorage.getItem('sc_selected_fiscal_year');
+  if (savedSelectedFY && !isNaN(parseInt(savedSelectedFY, 10))) {
+    state.selectedFiscalYear = parseInt(savedSelectedFY, 10);
+    if (!state.fiscalYears.includes(state.selectedFiscalYear)) {
+      state.fiscalYears.push(state.selectedFiscalYear);
+      state.fiscalYears.sort((a, b) => a - b);
+    }
+  }
+
+  const savedCustomHolidays = localStorage.getItem('sc_custom_holidays');
+  if (savedCustomHolidays) {
+    try {
+      state.customHolidays = JSON.parse(savedCustomHolidays) || {};
+    } catch (e) {
+      state.customHolidays = {};
     }
   }
 
@@ -1489,6 +1657,11 @@ function updateScopeButtonsUI() {
   const btnSingle = document.getElementById('btnScopeSingleMonth');
   if (!btnAll || !btnSingle) return;
 
+  const fy = state.selectedFiscalYear || 2570;
+  const shortStartY = String(fy - 1).slice(-2);
+  const shortEndY = String(fy).slice(-2);
+  btnAll.textContent = `แสดงทุกเดือน (ต.ค. ${shortStartY} - ก.ย. ${shortEndY})`;
+
   if (state.tableMonthScope === 'all') {
     btnAll.className = 'px-3 py-1.5 rounded-lg bg-white text-blue-700 font-semibold shadow-sm transition';
     btnSingle.className = 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition';
@@ -1496,6 +1669,230 @@ function updateScopeButtonsUI() {
     btnSingle.className = 'px-3 py-1.5 rounded-lg bg-white text-blue-700 font-semibold shadow-sm transition';
     btnAll.className = 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition';
   }
+}
+
+// ================= YEAR MANAGEMENT & CUSTOM HOLIDAYS =================
+function ensureYearInList(fyBE) {
+  const y = parseInt(fyBE, 10);
+  if (!y || isNaN(y)) return;
+  if (!state.fiscalYears.includes(y)) {
+    state.fiscalYears.push(y);
+    state.fiscalYears.sort((a, b) => a - b);
+    localStorage.setItem('sc_fiscal_years', JSON.stringify(state.fiscalYears));
+  }
+}
+
+function renderYearSelectors() {
+  // รวบรวมปีที่มีในรายการกิจกรรมด้วยเสมอ
+  state.events.forEach((evt) => {
+    if (evt.academicYear) ensureYearInList(parseInt(evt.academicYear, 10));
+    if (evt.startDate) {
+      const gy = parseInt(evt.startDate.slice(0, 4), 10);
+      const gm = parseInt(evt.startDate.slice(5, 7), 10);
+      if (gy && gm) {
+        const fy = gm >= 10 ? gy + 543 + 1 : gy + 543;
+        ensureYearInList(fy);
+      }
+    }
+  });
+
+  const fySelect = document.getElementById('fiscalYearSelect');
+  if (fySelect) {
+    fySelect.innerHTML = state.fiscalYears
+      .map((fy) => {
+        const sY = String(fy - 1).slice(-2);
+        const eY = String(fy).slice(-2);
+        return `<option value="${fy}" ${fy === state.selectedFiscalYear ? 'selected' : ''}>ปีงบฯ ${fy} (ต.ค. ${sY} – ก.ย. ${eY})</option>`;
+      })
+      .join('');
+  }
+
+  const acadFilterSelect = document.getElementById('academicYearSelect');
+  if (acadFilterSelect) {
+    const currentVal = state.selectedAcademicYear || 'all';
+    acadFilterSelect.innerHTML =
+      `<option value="all" ${currentVal === 'all' ? 'selected' : ''}>ทุกปีการศึกษา</option>` +
+      state.fiscalYears
+        .map(
+          (y) =>
+            `<option value="${y}" ${String(currentVal) === String(y) ? 'selected' : ''}>ปีการศึกษา ${y}</option>`
+        )
+        .join('');
+  }
+
+  const eventAcadSelect = document.getElementById('eventAcademicYearInput');
+  if (eventAcadSelect) {
+    const currentVal = eventAcadSelect.value || String(state.selectedFiscalYear - 1);
+    eventAcadSelect.innerHTML = state.fiscalYears
+      .map(
+        (y) => `<option value="${y}" ${String(currentVal) === String(y) ? 'selected' : ''}>${y}</option>`
+      )
+      .join('');
+  }
+
+  updateScopeButtonsUI();
+}
+
+function handleFiscalYearChange(newFyVal) {
+  const fy = parseInt(newFyVal, 10);
+  if (!fy) return;
+  ensureYearInList(fy);
+  state.selectedFiscalYear = fy;
+  localStorage.setItem('sc_selected_fiscal_year', String(fy));
+
+  // เลื่อนเดือนปัจจุบันไปที่ ต.ค. ของปีงบประมาณที่เลือก
+  const months = getFiscalYearMonths(fy);
+  state.currentYear = months[0].year;
+  state.currentMonth = months[0].month;
+
+  renderYearSelectors();
+  renderAll();
+}
+
+function changeFiscalYear(delta) {
+  const nextFy = (parseInt(state.selectedFiscalYear, 10) || 2570) + delta;
+  ensureYearInList(nextFy);
+  handleFiscalYearChange(nextFy);
+  showToast(`เปลี่ยนเป็นปีงบประมาณ พ.ศ. ${nextFy} เรียบร้อยแล้ว`, 'info');
+}
+
+function addNextFiscalYear() {
+  const maxYear = state.fiscalYears.length > 0 ? Math.max(...state.fiscalYears) : 2570;
+  const newYear = maxYear + 1;
+  ensureYearInList(newYear);
+  handleFiscalYearChange(newYear);
+  showToast(`เพิ่มปีงบประมาณ พ.ศ. ${newYear} พร้อมวันหยุดราชการอัตโนมัติเรียบร้อยแล้ว`, 'success');
+}
+
+function openHolidaysModal() {
+  renderHolidaysModalContent();
+  const modal = document.getElementById('holidaysModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeHolidaysModal() {
+  const modal = document.getElementById('holidaysModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+function renderHolidaysModalContent() {
+  const fy = state.selectedFiscalYear || 2570;
+  const titleEl = document.getElementById('holidaysModalTitle');
+  const listEl = document.getElementById('holidaysModalList');
+  const dateInput = document.getElementById('customHolidayDateInput');
+  if (!listEl) return;
+
+  if (titleEl) {
+    titleEl.textContent = `วันหยุดประจำปีงบประมาณ ${fy} (ต.ค. ${fy - 1} – ก.ย. ${fy})`;
+  }
+
+  const fyMonths = getFiscalYearMonths(fy);
+  if (dateInput && !dateInput.value) {
+    dateInput.value = `${fyMonths[0].year}-10-01`;
+  }
+
+  // รวบรวมวันหยุดทั้งหมดใน 12 เดือนของปีงบประมาณที่เลือก
+  const holidaysInFY = [];
+  fyMonths.forEach(({ year, month }) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const name = getThaiHoliday(dateStr);
+      if (name) {
+        const isCustom =
+          state.customHolidays && Object.prototype.hasOwnProperty.call(state.customHolidays, dateStr);
+        holidaysInFY.push({ dateStr, name, isCustom });
+      }
+    }
+  });
+
+  if (holidaysInFY.length === 0) {
+    listEl.innerHTML = `<div class="py-8 text-center text-xs text-slate-400">ไม่มีรายการวันหยุดในปีนี้</div>`;
+    return;
+  }
+
+  listEl.innerHTML = holidaysInFY
+    .map(
+      (h) => `
+      <div class="py-2.5 flex items-center justify-between gap-3 text-xs sm:text-sm">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="px-2.5 py-0.5 rounded-lg bg-red-600 text-white font-display font-semibold text-xs shrink-0">
+            ${formatFullThaiDate(h.dateStr)}
+          </span>
+          <span class="font-semibold text-slate-800 truncate">${escapeHtml(h.name)}</span>
+          ${
+            h.isCustom
+              ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 shrink-0">เพิ่ม/แก้ไขเอง</span>`
+              : `<span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-500 shrink-0">อัตโนมัติ</span>`
+          }
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onclick="prefillHolidayForm('${h.dateStr}', '${escapeHtml(h.name)}')"
+            class="px-2 py-1 rounded-lg text-[11px] text-blue-600 hover:bg-blue-50 font-medium"
+          >
+            แก้ไข
+          </button>
+          <button
+            type="button"
+            onclick="removeHolidayOnDate('${h.dateStr}')"
+            class="px-2 py-1 rounded-lg text-[11px] text-rose-600 hover:bg-rose-50 font-medium"
+          >
+            ลบ
+          </button>
+        </div>
+      </div>
+    `
+    )
+    .join('');
+}
+
+function prefillHolidayForm(dateStr, name) {
+  const dateInput = document.getElementById('customHolidayDateInput');
+  const nameInput = document.getElementById('customHolidayNameInput');
+  if (dateInput) dateInput.value = dateStr;
+  if (nameInput) {
+    nameInput.value = name;
+    nameInput.focus();
+  }
+}
+
+function handleAddCustomHoliday(e) {
+  e.preventDefault();
+  const dateInput = document.getElementById('customHolidayDateInput');
+  const nameInput = document.getElementById('customHolidayNameInput');
+  const dateStr = dateInput?.value;
+  const name = nameInput?.value.trim();
+  if (!dateStr || !name) return;
+
+  state.customHolidays[dateStr] = name;
+  localStorage.setItem('sc_custom_holidays', JSON.stringify(state.customHolidays));
+
+  // หากวันที่อยู่ในปีงบประมาณอื่น ให้เพิ่มปีนั้นเข้าตัวเลือกด้วยอัตโนมัติ
+  const gy = parseInt(dateStr.slice(0, 4), 10);
+  const gm = parseInt(dateStr.slice(5, 7), 10);
+  const fyOfHoliday = gm >= 10 ? gy + 543 + 1 : gy + 543;
+  ensureYearInList(fyOfHoliday);
+
+  if (nameInput) nameInput.value = '';
+  renderYearSelectors();
+  renderHolidaysModalContent();
+  renderAll();
+  showToast(`บันทึกวันหยุด "${name}" (${formatFullThaiDate(dateStr)}) เรียบร้อยแล้ว`, 'success');
+}
+
+function removeHolidayOnDate(dateStr) {
+  state.customHolidays[dateStr] = ''; // ค่าว่างใช้แทนการซ่อน/ลบวันหยุดในวันนั้น
+  localStorage.setItem('sc_custom_holidays', JSON.stringify(state.customHolidays));
+  renderHolidaysModalContent();
+  renderAll();
+  showToast(`ลบวันหยุดวันที่ ${formatFullThaiDate(dateStr)} แล้ว`, 'info');
 }
 
 function selectSpecificMonthFromBar(year, month) {
@@ -1612,17 +2009,19 @@ function renderAll() {
   const thaiYear = state.currentYear + 543;
   const monthName = THAI_MONTHS[state.currentMonth];
   const isAllMonthsSplit = state.viewMode === 'split' && state.tableMonthScope === 'all';
+  const fy = state.selectedFiscalYear || 2570;
+  const fyMonths = getFiscalYearMonths(fy);
 
   const titleEl = document.getElementById('currentMonthYearTitle');
   if (isAllMonthsSplit) {
-    titleEl.textContent = 'ปีงบประมาณ 2570 (ต.ค. 2569 – ก.ย. 2570)';
+    titleEl.textContent = `ปีงบประมาณ ${fy} (ต.ค. ${fy - 1} – ก.ย. ${fy})`;
   } else {
     titleEl.textContent = `เดือน ${monthName} ${thaiYear}`;
   }
 
   // Update Print Header
   document.getElementById('printSubtitle').textContent = isAllMonthsSplit
-    ? 'ประจำปีงบประมาณ พ.ศ. 2570 (ตุลาคม 2569 – กันยายน 2570)'
+    ? `ประจำปีงบประมาณ พ.ศ. ${fy} (ตุลาคม ${fy - 1} – กันยายน ${fy})`
     : `ประจำเดือน ${monthName} พ.ศ. ${thaiYear}`;
 
   const deptFilterLabel =
@@ -1640,8 +2039,9 @@ function renderAll() {
 
   const filtered = getFilteredEvents();
   const monthEvents = filtered.filter((e) => isEventInMonth(e, state.currentYear, state.currentMonth));
+  const fyEvents = filtered.filter((e) => fyMonths.some(({ year, month }) => isEventInMonth(e, year, month)));
 
-  const activeEventsForCounter = isAllMonthsSplit ? filtered : monthEvents;
+  const activeEventsForCounter = isAllMonthsSplit ? fyEvents : monthEvents;
   const submissionEventsCount = activeEventsForCounter.filter((e) => isSubmissionTask(e)).length;
 
   document.getElementById('eventCountBadge').textContent = isAllMonthsSplit
@@ -1659,14 +2059,15 @@ function renderAll() {
   }
 }
 
-// แถบปุ่มลัดเลือกเดือน (ต.ค. 69 - ก.ย. 70)
+// แถบปุ่มลัดเลือกเดือนตามปีงบประมาณที่เลือก
 function renderQuickMonthJumpBar(filteredEvents) {
   const bar = document.getElementById('monthQuickJumpBar');
   if (!bar) return;
 
   const shortMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const fyMonths = getFiscalYearMonths(state.selectedFiscalYear);
 
-  const buttonsHtml = FISCAL_YEAR_2570_MONTHS.map(({ year, month }) => {
+  const buttonsHtml = fyMonths.map(({ year, month }) => {
     const shortY = String(year + 543).slice(-2);
     const label = `${shortMonths[month]} ${shortY}`;
     const count = filteredEvents.filter((e) => isEventInMonth(e, year, month)).length;
@@ -1708,7 +2109,7 @@ function renderSplitTableView(filteredEvents) {
 
   const monthsToRender =
     state.tableMonthScope === 'all'
-      ? FISCAL_YEAR_2570_MONTHS
+      ? getFiscalYearMonths(state.selectedFiscalYear)
       : [{ year: state.currentYear, month: state.currentMonth }];
 
   const rowsHtml = monthsToRender
@@ -1736,16 +2137,17 @@ function renderSingleSplitMonthRow(year, month, filteredEvents) {
       return a.endDate.localeCompare(b.endDate);
     });
 
-  // รวบรวมวันหยุดราชการประจำเดือนนี้
+  // รวบรวมวันหยุดราชการประจำเดือนนี้ (คำนวณอัตโนมัติทุกปี + วันหยุดที่เพิ่มเอง)
   const monthHolidays = [];
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    if (THAI_HOLIDAYS[dateStr]) {
+    const hName = getThaiHoliday(dateStr);
+    if (hName) {
       monthHolidays.push({
         day: d,
         dateStr,
         dateLabel: `${d} ${shortMonthName} ${shortThaiYear}`,
-        name: THAI_HOLIDAYS[dateStr]
+        name: hName
       });
     }
   }
@@ -1760,7 +2162,7 @@ function renderSingleSplitMonthRow(year, month, filteredEvents) {
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const holidayName = THAI_HOLIDAYS[dateStr];
+    const holidayName = getThaiHoliday(dateStr);
     const eventsOnDay = monthEvents.filter((evt) => evt.startDate <= dateStr && evt.endDate >= dateStr);
     const hasSubmissionOnDay = eventsOnDay.some((evt) => isSubmissionTask(evt));
     const multiDayEventOnDay = eventsOnDay.find((evt) => evt.startDate !== evt.endDate);
@@ -2007,7 +2409,7 @@ function handleMiniCalDateClick(dateStr) {
     return;
   }
   const matching = getFilteredEvents().filter((e) => e.startDate <= dateStr && e.endDate >= dateStr);
-  const holiday = THAI_HOLIDAYS[dateStr];
+  const holiday = getThaiHoliday(dateStr);
   if (matching.length === 1) {
     openDetailModal(matching[0].id);
   } else if (matching.length > 1) {
@@ -2096,7 +2498,7 @@ function renderMonthGrid(filteredEvents) {
       const dayHeadersHtml = week
         .map((cell) => {
           const isToday = cell.dateStr === todayStr;
-          const holidayName = THAI_HOLIDAYS[cell.dateStr];
+          const holidayName = getThaiHoliday(cell.dateStr);
 
           if (!cell.isCurrentMonth) {
             return `
@@ -2636,6 +3038,8 @@ function openEventModal(editEventId = null, defaultDate = null) {
     return;
   }
 
+  renderYearSelectors();
+
   const modal = document.getElementById('eventFormModal');
   const titleEl = document.getElementById('eventModalTitle');
   const isSubmissionCheckbox = document.getElementById('eventIsSubmissionInput');
@@ -2648,7 +3052,7 @@ function openEventModal(editEventId = null, defaultDate = null) {
     document.getElementById('eventIdInput').value = evt.id;
     document.getElementById('eventTitleInput').value = evt.title;
     renderEventDepartmentCheckboxes(getEventDepartments(evt));
-    document.getElementById('eventAcademicYearInput').value = evt.academicYear || '2569';
+    document.getElementById('eventAcademicYearInput').value = evt.academicYear || String(state.selectedFiscalYear);
     document.getElementById('eventStartDateInput').value = evt.startDate;
     document.getElementById('eventEndDateInput').value = evt.endDate;
     document.getElementById('eventTimeInput').value = evt.time || '';
@@ -2666,7 +3070,7 @@ function openEventModal(editEventId = null, defaultDate = null) {
     document.getElementById('eventStartDateInput').value = todayDefault;
     document.getElementById('eventEndDateInput').value = todayDefault;
     document.getElementById('eventAcademicYearInput').value =
-      state.selectedAcademicYear === 'all' ? '2569' : state.selectedAcademicYear;
+      state.selectedAcademicYear === 'all' ? String(state.selectedFiscalYear) : state.selectedAcademicYear;
     document.getElementById('eventTimeInput').value = '';
     parseEventTimeIntoInputs('ตลอดทั้งวัน');
     document.getElementById('eventLocationInput').value = '';

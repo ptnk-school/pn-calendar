@@ -1,4 +1,4 @@
-const CACHE_NAME = 'school-calendar-v9';
+const CACHE_NAME = 'school-calendar-v10';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
