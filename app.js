@@ -1272,9 +1272,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initPWA() {
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => {
+        if (key !== 'school-calendar-v9') {
+          caches.delete(key);
+        }
+      });
+    });
+  }
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker
-      .register('./sw.js?v=8')
+      .register('./sw.js?v=9', { updateViaCache: 'none' })
       .then((reg) => {
         reg.update();
       })
@@ -2478,9 +2487,10 @@ function renderEventDepartmentCheckboxes(selectedDepts = ['central']) {
 
   const selectedSet = new Set(Array.isArray(selectedDepts) && selectedDepts.length ? selectedDepts : ['central']);
 
-  container.innerHTML = Object.values(DEPARTMENTS)
-    .map((dept) => {
-      const checked = selectedSet.has(dept.id);
+  container.innerHTML = Object.entries(DEPARTMENTS)
+    .map(([deptKey, dept]) => {
+      const realId = dept.id || deptKey;
+      const checked = selectedSet.has(realId);
       return `
         <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none ${
           checked
@@ -2490,7 +2500,8 @@ function renderEventDepartmentCheckboxes(selectedDepts = ['central']) {
           <input
             type="checkbox"
             name="eventDeptCheckbox"
-            value="${dept.id}"
+            value="${realId}"
+            data-dept-id="${realId}"
             ${checked ? 'checked' : ''}
             onchange="updateDeptCheckboxLabelStyles()"
             class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
@@ -2700,7 +2711,14 @@ async function handleEventFormSubmit(e) {
   const checkedInputs = Array.from(
     document.querySelectorAll('#eventDeptCheckboxesContainer input[name="eventDeptCheckbox"]:checked')
   );
-  const selectedDepts = checkedInputs.map((i) => i.value);
+  const selectedDepts = checkedInputs
+    .map((i) => {
+      const rawVal = i.getAttribute('data-dept-id') || i.value;
+      if (rawVal && DEPARTMENTS[rawVal]) return rawVal;
+      const labelText = i.closest('label')?.textContent?.trim() || '';
+      return resolveDeptId(labelText);
+    })
+    .filter(Boolean);
 
   if (selectedDepts.length === 0) {
     showToast('กรุณาเลือกฝ่ายงานที่รับผิดชอบอย่างน้อย 1 ฝ่าย', 'error');

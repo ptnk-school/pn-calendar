@@ -35,7 +35,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=9" />
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
@@ -378,7 +378,41 @@
             <button type="button" onclick="selectAllEventDepartments()" class="text-[11px] text-blue-600 hover:underline font-medium">เลือกทุกฝ่าย</button>
           </div>
           <div id="eventDeptCheckboxesContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <!-- Rendered by JS -->
+            <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-blue-50 border-blue-400 text-blue-950 font-semibold shadow-2xs">
+              <input type="checkbox" name="eventDeptCheckbox" value="central" data-dept-id="central" checked onchange="updateDeptCheckboxLabelStyles()" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <span class="w-2 h-2 rounded-full bg-teal-600 shrink-0"></span>
+              <span class="text-xs font-display truncate">ส่วนกลาง</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100">
+              <input type="checkbox" name="eventDeptCheckbox" value="director" data-dept-id="director" onchange="updateDeptCheckboxLabelStyles()" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <span class="w-2 h-2 rounded-full bg-indigo-600 shrink-0"></span>
+              <span class="text-xs font-display truncate">ฝ่ายอำนวยการ</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100">
+              <input type="checkbox" name="eventDeptCheckbox" value="academic" data-dept-id="academic" onchange="updateDeptCheckboxLabelStyles()" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <span class="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
+              <span class="text-xs font-display truncate">กลุ่มบริหารวิชาการ</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100">
+              <input type="checkbox" name="eventDeptCheckbox" value="student" data-dept-id="student" onchange="updateDeptCheckboxLabelStyles()" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <span class="w-2 h-2 rounded-full bg-emerald-600 shrink-0"></span>
+              <span class="text-xs font-display truncate">กลุ่มบริหารกิจการนักเรียน</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100">
+              <input type="checkbox" name="eventDeptCheckbox" value="general" data-dept-id="general" onchange="updateDeptCheckboxLabelStyles()" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+              <span class="text-xs font-display truncate">กลุ่มบริหารทั่วไป</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100">
+              <input type="checkbox" name="eventDeptCheckbox" value="budget" data-dept-id="budget" onchange="updateDeptCheckboxLabelStyles()" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <span class="w-2 h-2 rounded-full bg-rose-600 shrink-0"></span>
+              <span class="text-xs font-display truncate">กลุ่มบริหารงบประมาณและแผน</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100">
+              <input type="checkbox" name="eventDeptCheckbox" value="personnel" data-dept-id="personnel" onchange="updateDeptCheckboxLabelStyles()" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <span class="w-2 h-2 rounded-full bg-purple-600 shrink-0"></span>
+              <span class="text-xs font-display truncate">กลุ่มบริหารงานบุคคล</span>
+            </label>
           </div>
         </div>
 
@@ -656,6 +690,6 @@
   <!-- Toast Notification -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 no-print"></div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
