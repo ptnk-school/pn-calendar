@@ -9,6 +9,7 @@
 const DEPARTMENTS = {
   central: {
     id: 'central',
+    key: 'central',
     name: 'ส่วนกลาง',
     shortName: 'ส่วนกลาง',
     pin: '1111',
@@ -20,6 +21,7 @@ const DEPARTMENTS = {
   },
   director: {
     id: 'director',
+    key: 'director',
     name: 'ฝ่ายอำนวยการ',
     shortName: 'อำนวยการ',
     pin: '1111',
@@ -31,6 +33,7 @@ const DEPARTMENTS = {
   },
   academic: {
     id: 'academic',
+    key: 'academic',
     name: 'กลุ่มบริหารวิชาการ',
     shortName: 'วิชาการ',
     pin: '1111',
@@ -42,6 +45,7 @@ const DEPARTMENTS = {
   },
   student: {
     id: 'student',
+    key: 'student',
     name: 'กลุ่มบริหารกิจการนักเรียน',
     shortName: 'กิจการนักเรียน',
     pin: '1111',
@@ -53,6 +57,7 @@ const DEPARTMENTS = {
   },
   general: {
     id: 'general',
+    key: 'general',
     name: 'กลุ่มบริหารทั่วไป',
     shortName: 'บริหารทั่วไป',
     pin: '1111',
@@ -64,6 +69,7 @@ const DEPARTMENTS = {
   },
   budget: {
     id: 'budget',
+    key: 'budget',
     name: 'กลุ่มบริหารงบประมาณและแผน',
     shortName: 'งบประมาณ/แผน',
     pin: '1111',
@@ -75,6 +81,7 @@ const DEPARTMENTS = {
   },
   personnel: {
     id: 'personnel',
+    key: 'personnel',
     name: 'กลุ่มบริหารงานบุคคล',
     shortName: 'งานบุคคล',
     pin: '1111',
@@ -89,19 +96,34 @@ const DEPARTMENTS = {
 // รหัสผ่านกลาง (รองรับทั้ง 1111 และรหัสเดิมเพื่อให้ใช้งานได้สะดวกทันที)
 const SHARED_PINS = ['1111', '9999', '1234', '2222', '3333', '4444', '5555', '6666'];
 
+function resolveDeptId(token) {
+  if (!token) return null;
+  const t = String(token).trim();
+  if (DEPARTMENTS[t]) return t;
+  const found = Object.values(DEPARTMENTS).find((d) => d.name === t || d.shortName === t);
+  return found ? found.id : null;
+}
+
 // ดึงรายการรหัสฝ่ายงานทั้งหมดของกิจกรรม (รองรับการเลือกหลายฝ่ายงาน เช่น "academic,student" หรือ ['academic', 'student'])
 function getEventDepartments(evt) {
   if (!evt) return ['academic'];
   if (Array.isArray(evt.departments) && evt.departments.length > 0) {
-    const valid = evt.departments.filter((d) => DEPARTMENTS[d]);
-    if (valid.length > 0) return valid;
+    const valid = evt.departments.map(resolveDeptId).filter(Boolean);
+    if (valid.length > 0) return Array.from(new Set(valid));
   }
   if (evt.department) {
     const parts = String(evt.department)
       .split(',')
-      .map((s) => s.trim())
-      .filter((d) => DEPARTMENTS[d]);
-    if (parts.length > 0) return parts;
+      .map(resolveDeptId)
+      .filter(Boolean);
+    if (parts.length > 0) return Array.from(new Set(parts));
+  }
+  if (evt.updatedBy) {
+    const fromUpdatedBy = String(evt.updatedBy)
+      .split(',')
+      .map(resolveDeptId)
+      .filter(Boolean);
+    if (fromUpdatedBy.length > 0) return Array.from(new Set(fromUpdatedBy));
   }
   return ['academic'];
 }
@@ -1251,9 +1273,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initPWA() {
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
-      console.log('ServiceWorker registration skipped:', err);
-    });
+    navigator.serviceWorker
+      .register('./sw.js?v=8')
+      .then((reg) => {
+        reg.update();
+      })
+      .catch((err) => {
+        console.log('ServiceWorker registration skipped:', err);
+      });
   }
 
   window.addEventListener('beforeinstallprompt', (e) => {
@@ -2194,7 +2221,12 @@ function renderMonthGrid(filteredEvents) {
                 ? `<span class="submission-tag">📌 ส่งงาน</span>`
                 : isMultiDay
                 ? `<span class="text-[10px] opacity-90 shrink-0">${continuesLeft ? '◀' : '🗓️'}</span>`
-                : `<span class="w-1.5 h-1.5 rounded-full ${dept.dotClass} shrink-0"></span>`;
+                : evtDepts
+                    .map(
+                      (k) =>
+                        `<span class="w-1.5 h-1.5 rounded-full ${DEPARTMENTS[k]?.dotClass || dept.dotClass} shrink-0"></span>`
+                    )
+                    .join('');
 
               const dateRangeShort = isMultiDay
                 ? ` (${formatDayNumber(evt.startDate)}–${formatDayNumber(evt.endDate)} ${formatShortThaiMonth(evt.endDate)})`
@@ -2202,7 +2234,7 @@ function renderMonthGrid(filteredEvents) {
 
               const multiDeptBadge =
                 evtDepts.length > 1
-                  ? `<span class="text-[9px] opacity-85 shrink-0 font-semibold">[${evtDepts.length} ฝ่าย]</span>`
+                  ? `<span class="text-[9px] opacity-90 shrink-0 font-semibold">(${allDeptNames})</span>`
                   : '';
 
               return `
@@ -2448,7 +2480,7 @@ function renderEventDepartmentCheckboxes(selectedDepts = ['central']) {
 
   container.innerHTML = Object.values(DEPARTMENTS)
     .map((dept) => {
-      const checked = selectedSet.has(dept.key);
+      const checked = selectedSet.has(dept.id);
       return `
         <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition select-none ${
           checked
@@ -2458,7 +2490,7 @@ function renderEventDepartmentCheckboxes(selectedDepts = ['central']) {
           <input
             type="checkbox"
             name="eventDeptCheckbox"
-            value="${dept.key}"
+            value="${dept.id}"
             ${checked ? 'checked' : ''}
             onchange="updateDeptCheckboxLabelStyles()"
             class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
