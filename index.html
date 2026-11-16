@@ -35,7 +35,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
@@ -63,6 +63,14 @@
           <i data-lucide="plus-circle" class="w-4 h-4"></i>
           <span class="hidden sm:inline">เพิ่มงาน/กิจกรรม</span>
         </button>
+
+        <!-- Google Calendar Personal Connection Button (One-time email setup) -->
+        <div id="gcalUserStatusContainer">
+          <button onclick="openGcalConnectModal()" title="ผูกอีเมลครั้งเดียวเพื่อเลือกเพิ่มงานเข้า Google Calendar ของคุณ" class="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-display font-medium text-xs px-2.5 sm:px-3 py-2 rounded-xl transition">
+            <i data-lucide="calendar-check" class="w-4 h-4 text-emerald-600"></i>
+            <span id="gcalHeaderBtnText" class="hidden sm:inline">เชื่อม Google Calendar</span>
+          </button>
+        </div>
 
         <!-- Current Role Badge / Login Button -->
         <div id="userStatusContainer">
@@ -578,6 +586,25 @@
 
       <p id="detailUpdatedBy" class="hidden"></p>
 
+      <!-- Google Calendar Sync Box for This Event -->
+      <div class="mt-4 p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div class="min-w-0">
+          <div class="text-xs font-display font-bold text-emerald-950 flex items-center gap-1.5">
+            <i data-lucide="calendar-plus" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+            <span>เชื่อมต่อปฏิทิน Google Calendar ของคุณ</span>
+          </div>
+          <p id="detailGcalEmailHint" class="text-[11px] text-emerald-700 truncate mt-0.5">
+            ผูกอีเมลครั้งเดียว ไม่ต้องกรอกใหม่ทุกรอบ
+          </p>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button type="button" id="btnDetailAddToGcal" class="px-3.5 py-2 rounded-xl text-xs font-display font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5 transition">
+            <i data-lucide="calendar-check-2" class="w-3.5 h-3.5"></i>
+            <span id="btnDetailAddToGcalText">+ เพิ่มลง Google Calendar</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Action Buttons -->
       <div id="detailActionButtons" class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
         <div id="detailPermissionHint" class="text-xs text-slate-400"></div>
@@ -763,9 +790,78 @@
     </div>
   </div>
 
+  <!-- 7. GOOGLE CALENDAR ONE-TIME EMAIL CONNECTION MODAL -->
+  <div id="gcalConnectModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-fade-in">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200">
+            <i data-lucide="calendar-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-lg text-slate-900">เชื่อมต่อ Google Calendar ส่วนตัว</h3>
+            <p class="text-xs text-slate-500">กรอกอีเมลของคุณเพียงครั้งเดียว ระบบจะจำไว้ตลอดไป ไม่ต้องกรอกใหม่ทุกกิจกรรม</p>
+          </div>
+        </div>
+        <button onclick="closeGcalConnectModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleSaveGcalEmail(event)" class="mt-4 space-y-4">
+        <input type="hidden" id="pendingGcalEventIdInput" />
+
+        <div class="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-2.5">
+          <label for="userGcalEmailInput" class="block text-xs font-display font-bold text-emerald-950">
+            อีเมล Google Calendar ของคุณ (Gmail หรืออีเมลโรงเรียน) <span class="text-rose-500">*</span>
+          </label>
+          <input
+            type="email"
+            id="userGcalEmailInput"
+            required
+            placeholder="เช่น teacher@gmail.com"
+            class="w-full rounded-xl bg-white border border-emerald-300 px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+          <p class="text-[11px] text-emerald-800 leading-relaxed">
+            ✅ <strong>เชื่อมครั้งเดียวจำตลอดไป:</strong> เมื่อบันทึกอีเมลแล้ว ครั้งต่อไปคุณสามารถกดปุ่ม <strong>"+ ปฏิทิน"</strong> ท้ายงานที่ต้องการเพื่อส่งเข้า Google Calendar ของบัญชีนี้ได้ทันทีโดยไม่ต้องกรอกอีเมลซ้ำ
+          </p>
+        </div>
+
+        <div id="gcalConnectedStatusBox" class="hidden p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-display font-semibold text-slate-700">ส่งออกหลายกิจกรรมพร้อมกัน (ไฟล์ .ics เข้า Google Calendar / มือถือ):</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="exportSelectedToICS('filtered')" class="flex-1 px-3 py-2 rounded-xl text-xs font-display font-semibold bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 transition flex items-center justify-center gap-1.5">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>ดึงงานตามตัวกรองปัจจุบันเข้าปฏิทิน</span>
+            </button>
+            <button type="button" onclick="exportSelectedToICS('starred')" class="flex-1 px-3 py-2 rounded-xl text-xs font-display font-semibold bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 transition flex items-center justify-center gap-1.5">
+              <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+              <span>ดึงเฉพาะงานที่ฉันเลือกไว้ (<span id="gcalStarredCountText">0</span> งาน)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+          <button type="button" id="btnDisconnectGcalEmail" onclick="handleDisconnectGcalEmail()" class="hidden text-xs text-rose-600 hover:underline font-medium">
+            ยกเลิกการผูกอีเมลนี้
+          </button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" onclick="closeGcalConnectModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">ปิด</button>
+            <button type="submit" class="px-5 py-2 rounded-xl text-sm font-display font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>บันทึกอีเมล (จำตลอดไป)</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 no-print"></div>
 
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

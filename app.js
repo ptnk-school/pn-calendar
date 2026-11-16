@@ -1391,6 +1391,8 @@ let state = {
   viewMode: 'split', // 'split' (ตารางปฏิทินคู่ภารกิจ) | 'month' | 'list'
   tableMonthScope: 'all', // 'all' (แสดงทุกเดือนในรอบปี) | 'single' (ดูทีละเดือน)
   currentUser: null, // { role: 'admin' }
+  userGcalEmail: '', // อีเมล Google Calendar ส่วนตัว (กรอกครั้งเดียวจำตลอดไป)
+  userGcalSyncedIds: [], // รายการรหัสงานที่เลือกเชื่อมกับ Google Calendar ของตัวเองแล้ว
   schoolName: 'โรงเรียนพัฒนานิคม สพม.ลพบุรี',
   scriptUrl: ''
 };
@@ -1405,6 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderDepartmentFilters();
   renderDepartmentLegend();
   renderUserStatus();
+  renderGcalUserStatus();
   renderAll();
   if (window.lucide) {
     lucide.createIcons();
@@ -1415,7 +1418,7 @@ function initPWA() {
   if ('caches' in window) {
     caches.keys().then((keys) => {
       keys.forEach((key) => {
-        if (key !== 'school-calendar-v10') {
+        if (key !== 'school-calendar-v11') {
           caches.delete(key);
         }
       });
@@ -1423,7 +1426,7 @@ function initPWA() {
   }
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker
-      .register('./sw.js?v=10', { updateViaCache: 'none' })
+      .register('./sw.js?v=11', { updateViaCache: 'none' })
       .then((reg) => {
         reg.update();
       })
@@ -1521,6 +1524,21 @@ function loadSettingsAndData() {
       state.customHolidays = JSON.parse(savedCustomHolidays) || {};
     } catch (e) {
       state.customHolidays = {};
+    }
+  }
+
+  const savedGcalEmail = localStorage.getItem('sc_user_gcal_email');
+  if (savedGcalEmail) {
+    state.userGcalEmail = savedGcalEmail.trim();
+  }
+
+  const savedGcalSyncedIds = localStorage.getItem('sc_user_gcal_synced_ids');
+  if (savedGcalSyncedIds) {
+    try {
+      const parsedIds = JSON.parse(savedGcalSyncedIds);
+      if (Array.isArray(parsedIds)) state.userGcalSyncedIds = parsedIds;
+    } catch (e) {
+      state.userGcalSyncedIds = [];
     }
   }
 
@@ -2320,9 +2338,27 @@ function renderSingleSplitMonthRow(year, month, filteredEvents) {
                   </div>
                 </div>
 
-                <!-- ป้ายฝ่ายงานด้านขวา (รองรับหลายฝ่ายงาน) -->
+                <!-- ป้ายฝ่ายงานด้านขวา (รองรับหลายฝ่ายงาน) + ปุ่มเพิ่มเข้า Google Calendar ทันที -->
                 <div class="flex flex-wrap items-center justify-end gap-1.5 shrink-0 self-start sm:self-center pl-3.5 sm:pl-0">
                   ${deptPillsHtml}
+                  <button
+                    type="button"
+                    onclick="event.stopPropagation(); handleQuickAddEventToGcal('${evt.id}')"
+                    title="${
+                      isEventSyncedToUserGcal(evt.id)
+                        ? `เพิ่มใน Google Calendar (${state.userGcalEmail || 'ของคุณ'}) แล้ว — คลิกเพื่อเปิดซ้ำ`
+                        : state.userGcalEmail
+                        ? `คลิกเพื่อเพิ่มงานนี้ลง Google Calendar (${state.userGcalEmail})`
+                        : 'คลิกเพื่อเลือกเชื่อมงานนี้กับ Google Calendar ของคุณ'
+                    }"
+                    class="no-print inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-display font-semibold border transition ${
+                      isEventSyncedToUserGcal(evt.id)
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                        : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                    }"
+                  >
+                    <span>${isEventSyncedToUserGcal(evt.id) ? '✓ ในปฏิทินแล้ว' : '+ ปฏิทิน'}</span>
+                  </button>
                 </div>
               </div>
             `;
@@ -2780,6 +2816,17 @@ function renderListView(monthEvents) {
           </div>
 
           <div class="flex items-center justify-end gap-2 shrink-0 no-print">
+            <button
+              type="button"
+              onclick="event.stopPropagation(); handleQuickAddEventToGcal('${evt.id}')"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-display font-semibold border transition ${
+                isEventSyncedToUserGcal(evt.id)
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+              }"
+            >
+              <span>${isEventSyncedToUserGcal(evt.id) ? '✓ ในปฏิทินแล้ว' : '+ Google Calendar'}</span>
+            </button>
             ${
               canEdit
                 ? `<span class="text-[11px] font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">แก้ไขได้</span>`
@@ -3204,6 +3251,24 @@ function openDetailModal(eventId) {
   document.getElementById('detailDescText').textContent = evt.description || 'ไม่มีรายละเอียดเพิ่มเติม';
   document.getElementById('detailUpdatedBy').textContent = '';
 
+  // อัปเดตปุ่มเชื่อมต่อ Google Calendar ในหน้ารายละเอียด
+  const gcalHint = document.getElementById('detailGcalEmailHint');
+  const btnDetailGcal = document.getElementById('btnDetailAddToGcal');
+  const btnDetailGcalText = document.getElementById('btnDetailAddToGcalText');
+  const alreadySynced = isEventSyncedToUserGcal(evt.id);
+
+  if (gcalHint) {
+    gcalHint.innerHTML = state.userGcalEmail
+      ? `เชื่อมกับบัญชี: <strong>${escapeHtml(state.userGcalEmail)}</strong> <button type="button" onclick="closeDetailModal(); openGcalConnectModal('${evt.id}')" class="underline ml-1 text-emerald-800 hover:text-emerald-950">(เปลี่ยนอีเมล)</button>`
+      : 'กรอกอีเมลของคุณครั้งเดียวเพื่อเชื่อมต่อไปยัง Google Calendar ตลอดไป';
+  }
+  if (btnDetailGcal && btnDetailGcalText) {
+    btnDetailGcal.onclick = () => handleQuickAddEventToGcal(evt.id);
+    btnDetailGcalText.textContent = alreadySynced
+      ? '✓ เพิ่มใน Google Calendar แล้ว (เปิดซ้ำ)'
+      : '+ เพิ่มลง Google Calendar';
+  }
+
   const btnEdit = document.getElementById('btnEditCurrentEvent');
   const btnDelete = document.getElementById('btnDeleteCurrentEvent');
   const hint = document.getElementById('detailPermissionHint');
@@ -3395,6 +3460,285 @@ function exportToCSV() {
 
 function printCalendar() {
   window.print();
+}
+
+// ================= GOOGLE CALENDAR PERSONAL CONNECTION (ผูกอีเมลครั้งเดียวจำตลอดไป) =================
+function isEventSyncedToUserGcal(eventId) {
+  return Array.isArray(state.userGcalSyncedIds) && state.userGcalSyncedIds.includes(eventId);
+}
+
+function renderGcalUserStatus() {
+  const container = document.getElementById('gcalUserStatusContainer');
+  if (!container) return;
+
+  if (state.userGcalEmail) {
+    container.innerHTML = `
+      <button
+        type="button"
+        onclick="openGcalConnectModal()"
+        title="เชื่อมต่อ Google Calendar กับ ${escapeHtml(state.userGcalEmail)} แล้ว (คลิกเพื่อดูตั้งค่าหรือเปลี่ยนอีเมล)"
+        class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-display font-medium text-xs px-2.5 sm:px-3 py-2 rounded-xl shadow-xs transition"
+      >
+        <i data-lucide="calendar-check-2" class="w-4 h-4"></i>
+        <span class="hidden md:inline max-w-[150px] truncate">${escapeHtml(state.userGcalEmail)}</span>
+        <span class="md:hidden">เชื่อมปฏิทินแล้ว</span>
+      </button>
+    `;
+  } else {
+    container.innerHTML = `
+      <button
+        type="button"
+        onclick="openGcalConnectModal()"
+        title="ผูกอีเมลครั้งเดียวเพื่อเลือกเพิ่มงานเข้า Google Calendar ของคุณ"
+        class="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-display font-medium text-xs px-2.5 sm:px-3 py-2 rounded-xl transition"
+      >
+        <i data-lucide="calendar-plus" class="w-4 h-4 text-emerald-600"></i>
+        <span class="hidden sm:inline">เชื่อม Google Calendar</span>
+      </button>
+    `;
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function openGcalConnectModal(pendingEventId = '') {
+  const modal = document.getElementById('gcalConnectModal');
+  const emailInput = document.getElementById('userGcalEmailInput');
+  const pendingInput = document.getElementById('pendingGcalEventIdInput');
+  const statusBox = document.getElementById('gcalConnectedStatusBox');
+  const btnDisconnect = document.getElementById('btnDisconnectGcalEmail');
+  const starredCountEl = document.getElementById('gcalStarredCountText');
+
+  if (!modal) return;
+  if (pendingInput) pendingInput.value = pendingEventId || '';
+  if (emailInput) emailInput.value = state.userGcalEmail || '';
+  if (starredCountEl) starredCountEl.textContent = String(state.userGcalSyncedIds.length);
+
+  if (state.userGcalEmail) {
+    statusBox?.classList.remove('hidden');
+    btnDisconnect?.classList.remove('hidden');
+  } else {
+    statusBox?.classList.add('hidden');
+    btnDisconnect?.classList.add('hidden');
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  if (window.lucide) lucide.createIcons();
+
+  setTimeout(() => {
+    emailInput?.focus();
+  }, 50);
+}
+
+function closeGcalConnectModal() {
+  const modal = document.getElementById('gcalConnectModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+function handleSaveGcalEmail(e) {
+  e.preventDefault();
+  const emailInput = document.getElementById('userGcalEmailInput');
+  const pendingInput = document.getElementById('pendingGcalEventIdInput');
+  const email = (emailInput?.value || '').trim().toLowerCase();
+
+  if (!email || !email.includes('@')) {
+    showToast('กรุณากรอกอีเมลให้ถูกต้อง', 'error');
+    return;
+  }
+
+  state.userGcalEmail = email;
+  localStorage.setItem('sc_user_gcal_email', email);
+
+  const pendingEventId = pendingInput?.value || '';
+  if (pendingInput) pendingInput.value = '';
+
+  closeGcalConnectModal();
+  renderGcalUserStatus();
+  renderAll();
+
+  if (pendingEventId) {
+    // เมื่อกรอกอีเมลครั้งแรกเสร็จ ให้ส่งงานที่กดค้างไว้เข้า Google Calendar ทันที!
+    syncSingleEventToUserGcal(pendingEventId);
+  } else {
+    showToast(`ผูกอีเมล ${email} เรียบร้อยแล้ว! กดปุ่ม "+ ปฏิทิน" ที่งานใดก็ได้ทันทีโดยไม่ต้องกรอกอีเมลซ้ำ`, 'success');
+  }
+}
+
+function handleDisconnectGcalEmail() {
+  state.userGcalEmail = '';
+  localStorage.removeItem('sc_user_gcal_email');
+  closeGcalConnectModal();
+  renderGcalUserStatus();
+  renderAll();
+  showToast('ยกเลิกการผูกอีเมล Google Calendar แล้ว', 'info');
+}
+
+function handleQuickAddEventToGcal(eventId) {
+  if (!state.userGcalEmail) {
+    // หากยังไม่เคยกรอกอีเมล ให้กรอกแค่ครั้งแรกครั้งเดียว แล้วจะส่งงานนี้เข้าปฏิทินทันที
+    openGcalConnectModal(eventId);
+    showToast('กรอกอีเมลของคุณเพียงครั้งเดียว ระบบจะจำไว้ใช้ทุกกิจกรรมตลอดไป', 'info');
+    return;
+  }
+
+  syncSingleEventToUserGcal(eventId);
+}
+
+function syncSingleEventToUserGcal(eventId) {
+  const evt = state.events.find((x) => x.id === eventId);
+  if (!evt) return;
+
+  if (!state.userGcalSyncedIds.includes(eventId)) {
+    state.userGcalSyncedIds.push(eventId);
+    localStorage.setItem('sc_user_gcal_synced_ids', JSON.stringify(state.userGcalSyncedIds));
+  }
+
+  const gcalUrl = buildGoogleCalendarUrl(evt, state.userGcalEmail);
+  window.open(gcalUrl, '_blank', 'noopener,noreferrer');
+
+  renderAll();
+
+  // อัปเดตสถานะในหน้าต่างรายละเอียดหากเปิดค้างอยู่
+  const btnDetailGcalText = document.getElementById('btnDetailAddToGcalText');
+  if (btnDetailGcalText) {
+    btnDetailGcalText.textContent = '✓ เพิ่มใน Google Calendar แล้ว (เปิดซ้ำ)';
+  }
+
+  showToast(`เปิดหน้าบันทึก "${evt.title}" เข้าปฏิทินของ ${state.userGcalEmail} แล้ว`, 'success');
+}
+
+// สร้าง URL มาตรฐานของ Google Calendar พร้อมล็อกบัญชีอีเมล (authuser) ที่ผู้ใช้ผูกไว้
+function buildGoogleCalendarUrl(evt, userEmail) {
+  const isSub = isSubmissionTask(evt);
+  const deptNames = getEventDepartments(evt)
+    .map((k) => DEPARTMENTS[k]?.name || k)
+    .join(', ');
+
+  const titlePrefix = isSub ? '[📌 ส่งงาน ร.ร.พัฒนานิคม] ' : '[ร.ร.พัฒนานิคม] ';
+  const fullTitle = `${titlePrefix}${evt.title}`;
+
+  // คำนวณวันและเวลาในรูปแบบ Google Calendar (YYYYMMDD หรือ YYYYMMDDTHHMMSS)
+  const timeMatches = String(evt.time || '').match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g);
+  let datesParam = '';
+
+  if (timeMatches && timeMatches.length >= 1) {
+    const startHM = timeMatches[0].padStart(5, '0').replace(':', '') + '00';
+    const endHM =
+      timeMatches.length >= 2
+        ? timeMatches[1].padStart(5, '0').replace(':', '') + '00'
+        : timeMatches[0].padStart(5, '0').replace(':', '') + '00';
+    const startYMD = evt.startDate.replace(/-/g, '');
+    const endYMD = (evt.endDate || evt.startDate).replace(/-/g, '');
+    datesParam = `${startYMD}T${startHM}/${endYMD}T${endHM}`;
+  } else {
+    // กิจกรรมตลอดทั้งวัน (All-Day Event): Google Calendar กำหนดให้วันสิ้นสุดต้อง +1 วัน
+    const startYMD = evt.startDate.replace(/-/g, '');
+    const [ey, em, ed] = (evt.endDate || evt.startDate).split('-').map((n) => parseInt(n, 10));
+    const nextDayObj = new Date(ey, em - 1, ed + 1);
+    const endExclusiveYMD = formatDateYMD(nextDayObj).replace(/-/g, '');
+    datesParam = `${startYMD}/${endExclusiveYMD}`;
+  }
+
+  const detailsLines = [
+    `ฝ่ายงานที่รับผิดชอบ: ${deptNames}`,
+    `เวลา: ${evt.time || 'ตลอดทั้งวัน'}`,
+    `สถานที่: ${evt.location || 'โรงเรียนพัฒนานิคม'}`,
+    `ปีการศึกษา: ${evt.academicYear || '-'}`,
+    evt.description ? `\nรายละเอียด:\n${evt.description}` : ''
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: fullTitle,
+    dates: datesParam,
+    details: detailsLines,
+    location: evt.location || 'โรงเรียนพัฒนานิคม สพม.ลพบุรี',
+    ctz: 'Asia/Bangkok'
+  });
+
+  if (userEmail) {
+    params.set('add', userEmail);
+    params.set('authuser', userEmail);
+  }
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+// ส่งออกหลายกิจกรรมพร้อมกันเป็นไฟล์มาตรฐาน .ics (นำเข้า Google Calendar หรือปฏิทินมือถือได้ในครั้งเดียว)
+function exportSelectedToICS(mode = 'filtered') {
+  const targetEvents =
+    mode === 'starred'
+      ? state.events.filter((e) => state.userGcalSyncedIds.includes(e.id))
+      : getFilteredEvents();
+
+  if (targetEvents.length === 0) {
+    showToast(
+      mode === 'starred'
+        ? 'คุณยังไม่ได้กด "+ ปฏิทิน" เลือกงานใดไว้เลย'
+        : 'ไม่มีรายการกิจกรรมตามตัวกรองปัจจุบัน',
+      'error'
+    );
+    return;
+  }
+
+  const nowStamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const icsEvents = targetEvents
+    .map((evt) => {
+      const isSub = isSubmissionTask(evt);
+      const deptNames = getEventDepartments(evt)
+        .map((k) => DEPARTMENTS[k]?.name || k)
+        .join(', ');
+      const summary = `${isSub ? '[ส่งงาน] ' : ''}${evt.title}`.replace(/\r?\n/g, ' ');
+      const desc = `ฝ่ายงาน: ${deptNames}\\nเวลา: ${evt.time || 'ตลอดทั้งวัน'}\\nรายละเอียด: ${(
+        evt.description || '-'
+      ).replace(/\r?\n/g, '\\n')}`;
+      const loc = (evt.location || 'โรงเรียนพัฒนานิคม').replace(/\r?\n/g, ' ');
+
+      const startYMD = evt.startDate.replace(/-/g, '');
+      const [ey, em, ed] = (evt.endDate || evt.startDate).split('-').map((n) => parseInt(n, 10));
+      const nextDayObj = new Date(ey, em - 1, ed + 1);
+      const endExclusiveYMD = formatDateYMD(nextDayObj).replace(/-/g, '');
+
+      return [
+        'BEGIN:VEVENT',
+        `UID:${evt.id}@patananikom-calendar`,
+        `DTSTAMP:${nowStamp}`,
+        `DTSTART;VALUE=DATE:${startYMD}`,
+        `DTEND;VALUE=DATE:${endExclusiveYMD}`,
+        `SUMMARY:${summary}`,
+        `DESCRIPTION:${desc}`,
+        `LOCATION:${loc}`,
+        'END:VEVENT'
+      ].join('\r\n');
+    })
+    .join('\r\n');
+
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Patananikom School//School Activity Calendar//TH',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    icsEvents,
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ปฏิทินโรงเรียนพัฒนานิคม_${mode === 'starred' ? 'งานที่ฉันเลือก' : 'ตามตัวกรอง'}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  showToast(`ดาวน์โหลดไฟล์ปฏิทิน (.ics) จำนวน ${targetEvents.length} งานเรียบร้อยแล้ว`, 'success');
 }
 
 // ================= HELPERS =================
